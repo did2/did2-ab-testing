@@ -23,7 +23,7 @@ add_filter( 'template' , 'did2_ab_testing_template_filter' );
 add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
 
 function did2_ab_testing_admin_menu_hook() {
-	add_options_page( 'A/B Testing' , 'A/B Testing' , 'manage_options' , basename( __FILE__ ) , 'did2_ab_testing_options_page' );
+	$hook = add_options_page( 'A/B Testing' , 'A/B Testing' , 'manage_options' , basename( __FILE__ ) , 'did2_ab_testing_options_page' );
 }
 
 function did2_ab_testing_register_setting() {
@@ -38,7 +38,12 @@ function did2_ab_testing_options_validator ( $options ) {
 function did2_ab_testing_options_page() {
 ?>
 <div class="wrap">
-<h2>Did2 A/B Testing</h2>
+<h2>did2 A/B Testing Settings</h2>
+
+<div id="did2-ab-testing-split-settings" class="postbox">
+<div id="poststuff" class="metabox-holder">
+<h3 class="hndle"><span>Split Settings</span></h3>
+<div class="inside">
 <form method="post" action="options.php">
 <?php settings_fields( 'did2_ab_testing_options_group' ); ?>
 <?php do_settings_sections( 'did2_ab_testing_options_group' ); ?>
@@ -47,7 +52,8 @@ function did2_ab_testing_options_page() {
 <thead>
 	<tr>
 		<th>Theme</th>
-		<th>selection ratio (e.g. percentage)</th>
+		<th>Ratio (%)</th>
+		<th>AdSense Custom Channel ID</th>
 	</tr>
 </thead>
 <tbody id="themes">
@@ -64,6 +70,13 @@ function did2_ab_testing_options_page() {
 			value="<?php echo ( isset( $options[ $theme_dir_name ] ) ? $options[ $theme_dir_name ] : 0 ); ?>"
 		>
 	</td>
+	<td>
+		<input
+			type="text"
+			name="did2_ab_testing_options[adsense_custom_channel_id_<?php echo $theme_dir_name; ?>]"
+			value="<?php echo ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) ? $options[ "adsense_custom_channel_id_" . $theme_dir_name ] : 0 ); ?>"
+		>
+	</td>
 </tr>
 <?php
 	}
@@ -72,6 +85,29 @@ function did2_ab_testing_options_page() {
 </table>
 <?php submit_button(); ?>
 </form>
+<h4>How to use &quot;adsense custom channel id&quot;</h4>
+<p>In templates, you can call &quot;did2_ab_testing_adsense_custom_channel()&quot; function, which returns (not prints) adsense custom channel id for the selected template.</p>
+<h5>A sample for synchronized ad code:</h5>
+<pre>&lt;script&gt;
+...
+google_ad_width = 728;
+google_ad_height = 90;
+&lt;?php if ( function_exists ( &quot;did2_ab_testing_adsense_custom_channel&quot; ) ) : ?&gt;
+    google_ad_channel = &quot;&lt;?php echo did2_ab_testing_adsense_custom_channel(); ?&gt;&quot;;
+&lt;?php endif; ?&gt;
+&lt;/script&gt;</pre>
+<h5>Another sample for asynchronized ad code:</h5>
+<pre>(adsbygoogle = window.adsbygoogle || []).push({
+&lt;?php if ( function_exists ( &quot;did2_ab_testing_adsense_custom_channel&quot; ) ) : ?&gt;
+    params: { google_ad_channel: &quot;&lt;?php echo did2_ab_testing_adsense_custom_channel(); ?&gt;&quot;}
+&lt;?php endif; ?&gt;
+});</pre>
+<h5>Reference</h5>
+https://support.google.com/adsense/answer/1354736?hl=en
+</div>
+</div>
+</div>
+
 </div>
 <?php
 }
@@ -139,6 +175,19 @@ function did2_ab_testing_stylesheet_filter( $stylesheet ) {
 		return $stylesheet;
 	}
 	return $s;
+}
+
+// ------------------------------------------------------------
+// user functions
+// ------------------------------------------------------------
+function did2_ab_testing_adsense_custom_channel_id() {
+	$options = get_option( 'did2_ab_testing_options' );
+	$theme_dir_name = wp_get_theme()->get_stylesheet();
+	if ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) ) {
+		return $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
+	} else {
+		return "";
+	}
 }
 
 ?>

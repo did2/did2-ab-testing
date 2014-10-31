@@ -103,10 +103,8 @@ function did2_ab_testing_setup_theme() {
 		$ratios[ $ratio ] = $theme_dir_name;
 		$sum += $ratio;
 	}
-	if ( $sum == 0 ) {
-		return TRUE;
-	} else {
-		// ksort( $ratios );
+	if ( $sum != 0 ) {
+		// krsort( $ratios );
 		$rand = mt_rand( 1 , $sum );
 		foreach( $ratios as $ratio => $theme_dir_name ) {
 			$rand -= $ratio;
@@ -116,6 +114,12 @@ function did2_ab_testing_setup_theme() {
 				break;
 			}
 		}
+	}
+
+	$x_wp_template = $_SERVER[ 'HTTP_X_WP_TEMPLATE' ];
+	if($x_wp_template != "" && isset($themes[$x_wp_template])) {
+		$_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] = $themes[ $x_wp_template ][ 'Template' ];
+		$_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ] = $themes[ $x_wp_template ][ 'Stylesheet' ];
 	}
 }
 

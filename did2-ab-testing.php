@@ -7,7 +7,7 @@ Description:
 Version: 1.0.0
 Author: did2
 Author URI: http://did2memo.net/
-License: GPL2
+License: GPL2  
 */
 
 define( 'DID2AB_PATH' , dirname( __FILE__ ) );
@@ -23,7 +23,7 @@ add_filter( 'template' , 'did2_ab_testing_template_filter' );
 add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
 
 function did2_ab_testing_admin_menu_hook() {
-	$hook = add_options_page( 'A/B Testing' , 'A/B Testing' , 'manage_options' , basename( __FILE__ ) , 'did2_ab_testing_options_page' );
+	$hook = add_options_page( 'did2 A/B Testing' , 'did2 A/B Testing' , 'manage_options' , 'did2_ab_testing_options' , 'did2_ab_testing_options_page' );
 }
 
 function did2_ab_testing_register_setting() {
@@ -40,14 +40,33 @@ function did2_ab_testing_options_page() {
 <div class="wrap">
 <h2>did2 A/B Testing Settings</h2>
 
-<div id="did2-ab-testing-split-settings" class="postbox">
-<div id="poststuff" class="metabox-holder">
-<h3 class="hndle"><span>Split Settings</span></h3>
-<div class="inside">
 <form method="post" action="options.php">
 <?php settings_fields( 'did2_ab_testing_options_group' ); ?>
 <?php do_settings_sections( 'did2_ab_testing_options_group' ); ?>
 <?php $options = get_option( 'did2_ab_testing_options' ); ?>
+
+<h3>Google Auth Settings</h3>
+
+<table class="google-account">
+<tbody id="google-account">
+<tr valign="top">
+	<th scope="row">Google Authorization Code for AdSense</th>
+	<td>
+		<input
+			type="text"
+			style="width:100%;"
+			name="did2_ab_testing_options[google_adsense_authorization_code]"
+			value="<?php echo ( isset( $options[ 'google_adsense_authorization_code' ] ) ? $options[ 'google_adsense_authorization_code' ] : '' ); ?>"
+		>
+		<br />
+		Input your authorization code you obtain in <a href="https://accounts.google.com/o/oauth2/auth?scope=https://www.googleapis.com/auth/adsense.readonly&response_type=code&access_type=offline&redirect_uri=urn:ietf:wg:oauth:2.0:oob&approval_prompt=auto&client_id=153026819782-lgu4cg9uepvvi9bj5fhd38v8nq70trr0.apps.googleusercontent.com&hl=ja&from_login=1&as=&pli=1&authuser=0" target="_blank" title="">google.com</a>.
+	</td>
+</tr>
+</tbody>
+</table>
+
+<h3>All Templates</h3>
+
 <table class="theme-ratio">
 <thead>
 	<tr>
@@ -83,8 +102,7 @@ function did2_ab_testing_options_page() {
 ?>
 </tbody>
 </table>
-<?php submit_button(); ?>
-</form>
+
 <h4>How to use &quot;adsense custom channel id&quot;</h4>
 <p>In templates, you can call &quot;did2_ab_testing_adsense_custom_channel()&quot; function, which returns (not prints) adsense custom channel id for the selected template.</p>
 <h5>A sample for synchronized ad code:</h5>
@@ -104,11 +122,10 @@ google_ad_height = 90;
 });</pre>
 <h5>Reference</h5>
 https://support.google.com/adsense/answer/1354736?hl=en
-</div>
-</div>
-</div>
 
-</div>
+<?php submit_button(); ?>
+</form>
+
 <?php
 }
 

@@ -34,9 +34,97 @@ function did2_ab_testing_options_validator ( $options ) {
 	return $options;
 }
 
+function duplicate_theme( $from_theme_dir_name, $to_theme_dir_name = '', $to_theme_name = '') {
+	global $wp_filesystem;
+	//require_once(ABSPATH . 'wp-admin/includes/file.php');
+
+	$from_theme = wp_get_theme( $from_theme_dir_name );
+	if ( ! $from_theme->exists() )
+		wp_die( 'Original Theme:' . $from_theme_dir_name . ' does not exist.' );
+
+	$to_theme = wp_get_theme( $to_theme_dir_name );
+	if ( $to_theme->exists() )
+		wp_die( 'New Theme:' . $to_theme_dir_name . ' already exists.' );		
+
+	$redirect = wp_nonce_url( 'options-general.php?page=did2_ab_testing_options', '', false, false, array( 'copy_from', 'new_name', 'new_dir_name') );
+	if ( false === ($credentials = request_filesystem_credentials($redirect)) ) {
+		$data = ob_get_contents();
+		ob_end_clean();
+		if ( ! empty($data) ){
+			include_once( ABSPATH . 'wp-admin/admin-header.php');
+			echo $data;
+			include( ABSPATH . 'wp-admin/admin-footer.php');
+			exit;
+		}
+		return;
+	}
+
+	if ( ! WP_Filesystem($credentials) ) {
+		request_filesystem_credentials($redirect, '', true); // Failed to connect, Error and request again
+		$data = ob_get_contents();
+		ob_end_clean();
+		if ( ! empty($data) ) {
+			include_once( ABSPATH . 'wp-admin/admin-header.php');
+			echo $data;
+			include( ABSPATH . 'wp-admin/admin-footer.php');
+			exit;
+		}
+		return;
+	}
+
+	if ( ! is_object($wp_filesystem) )
+		return new WP_Error('fs_unavailable', __('Could not access filesystem.'));
+
+	if ( is_wp_error($wp_filesystem->errors) && $wp_filesystem->errors->get_error_code() )
+		return new WP_Error('fs_error', __('Filesystem error.'), $wp_filesystem->errors);
+
+	$themes_dir = $wp_filesystem->wp_themes_dir();
+	if ( empty( $themes_dir ) ) {
+		return new WP_Error( 'fs_no_themes_dir', __( 'Unable to locate WordPress theme directory.' ) );
+	}
+
+	$themes_dir = trailingslashit( $themes_dir );
+	$from_theme_dir_path = $themes_dir . $from_theme_dir_name;
+	$to_theme_dir_path = $themes_dir . $to_theme_dir_name;
+
+	$wp_filesystem->mkdir( $to_theme_dir_path );
+	$copy_dired = copy_dir( $from_theme_dir_path, $to_theme_dir_path );
+
+	if (is_wp_error($copy_dired)) {
+		echo $from_theme_dir_path . '<br />';
+		echo $to_theme_dir_path . '<br />';
+		echo $copy_dired->get_error_code() . '<br />';
+		echo $copy_dired->get_error_message() . '<br />';
+		echo $copy_dired->get_error_data() . '<br />';
+	}
+}
+
+add_action('admin_init', 'did2_ab_testing_process_post');
+//add_action('admin_post_duplicate', 'did2_ab_testing_process_post');
+function did2_ab_testing_process_post() {
+	// ------------------------------------------------------------
+	// POST
+	// ------------------------------------------------------------
+	if ( isset ( $_POST ['Duplicate'] ) && check_admin_referer( 'did2_ab_testing_duplicate', 'did2_ab_testing_nonce' )) {
+		//echo $_POST ['copy_from'] . ', ' . $_POST ['new_dir_name'] . ', ' . $_POST ['new_name'];
+		duplicate_theme( $_POST ['copy_from'], $_POST ['new_dir_name'], $_POST ['new_name'] );
+		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&duplicated=true') );
+		exit;
+	}
+}
+
 // generate options page
 function did2_ab_testing_options_page() {
+
+if ( isset($_GET['duplicated']) ) {
+	?>
+	<div class="updated">
+	<p>Duplication Complete.</p>
+	</div>
+	<?php
+}
 ?>
+
 <div class="wrap">
 <h2>did2 A/B Testing Settings</h2>
 
@@ -124,6 +212,50 @@ google_ad_height = 90;
 https://support.google.com/adsense/answer/1354736?hl=en
 
 <?php submit_button(); ?>
+</form>
+
+<h2>Duplicate Template</h2>
+
+<form name="did_ab_testing_duplicate_template_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
+	<?php wp_nonce_field('did2_ab_testing_duplicate', 'did2_ab_testing_nonce'); ?>
+	<input type="hidden" name="action" value="duplicate">
+	<table class="google-account">
+	<tbody id="google-account">
+	<tr valign="center">
+		<th scope="row">Copy FROM</th>
+		<td>
+			<select name="copy_from">
+				<?php
+				$themes = wp_get_themes();
+				foreach( $themes as $theme_dir_name => $theme ) {
+				?>
+					<option value="<?php echo $theme_dir_name; ?>"><?php echo $theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?></option>	
+				<?php
+				}
+				?>
+			</select>
+		</td>
+	</tr>
+	<tr valign="center">
+		<th scope="row">New Template Name</th>
+		<td>
+			<input type="text" name="new_name" style="width:100%;" value="New Template Name Here">
+		</td>
+	</tr>
+	<tr valign="center">
+		<th scope="row">New Template Directory Name</th>
+		<td>
+			<input type="text" name="new_dir_name" style="width:100%;" value="New Template Directory Name Here">
+		</td>
+	</tr>
+	</tbody>
+	</table>
+	<input
+		type="submit"
+		name="Duplicate"
+		class="button button-primary"
+		value="Duplicate"
+	>
 </form>
 
 <?php

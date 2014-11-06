@@ -116,7 +116,7 @@ function did2_ab_testing_process_post() {
 // generate options page
 function did2_ab_testing_options_page() {
 
-if ( isset($_GET['duplicated']) ) {
+if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 	?>
 	<div class="updated">
 	<p>Duplication Complete.</p>

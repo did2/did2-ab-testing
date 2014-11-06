@@ -97,6 +97,17 @@ function duplicate_theme( $from_theme_dir_name, $to_theme_dir_name = '', $to_the
 		echo $copy_dired->get_error_message() . '<br />';
 		echo $copy_dired->get_error_data() . '<br />';
 	}
+
+	// change template name
+	$style_file = trailingslashit($to_theme_dir_path) . 'style.css';
+	$style_file_contents = $wp_filesystem->get_contents($style_file);
+	if ( false === $style_file_contents ) {
+		wp_die('read error: ' . $style_file);
+	}
+	$style_file_contents = preg_replace('/Theme Name: .+/', "Theme Name: $to_theme_name", $style_file_contents);
+	if ( false === ($wp_filesystem->put_contents($style_file, $style_file_contents)) ) {
+		wp_die('write error: ' . $style_file);
+	}
 }
 
 add_action('admin_init', 'did2_ab_testing_process_post');
@@ -222,7 +233,7 @@ https://support.google.com/adsense/answer/1354736?hl=en
 	<table class="google-account">
 	<tbody id="google-account">
 	<tr valign="center">
-		<th scope="row">Copy FROM</th>
+		<th scope="row" style="text-align: left;">Copy FROM</th>
 		<td>
 			<select name="copy_from">
 				<?php
@@ -237,15 +248,15 @@ https://support.google.com/adsense/answer/1354736?hl=en
 		</td>
 	</tr>
 	<tr valign="center">
-		<th scope="row">New Template Name</th>
+		<th scope="row" style="text-align: left;">New Template Name</th>
 		<td>
 			<input type="text" name="new_name" style="width:100%;" value="New Template Name Here">
 		</td>
 	</tr>
 	<tr valign="center">
-		<th scope="row">New Template Directory Name</th>
+		<th scope="row" style="text-align: left;">New Template Directory Name</th>
 		<td>
-			<input type="text" name="new_dir_name" style="width:100%;" value="New Template Directory Name Here">
+			<input type="text" name="new_dir_name" style="width:100%;" value="new-template-dir-name-here">
 		</td>
 	</tr>
 	</tbody>

@@ -11,11 +11,14 @@ License: GPL2
 */
 
 define( 'DID2AB_PATH' , dirname( __FILE__ ) );
+require_once dirname(__FILE__) . '/diff-themes.php';
 
 if( is_admin() ) {
 	// require_once( DID2AB_PATH . '/did2-ab-testing-admin.php' );
-	add_action( 'admin_init' , 'did2_ab_testing_register_setting' );
-	add_action( 'admin_menu' , 'did2_ab_testing_admin_menu_hook' );
+	add_action('admin_init', 'did2_ab_testing_register_setting' );
+	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook' );
+	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_diff_themes' );
+	add_action('admin_enqueue_scripts', 'did2_ab_testing_enqueue_scripts');
 }
 add_action( 'init' , 'did2_ab_testing_init_session_start' );
 add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );
@@ -32,6 +35,11 @@ function did2_ab_testing_register_setting() {
 
 function did2_ab_testing_options_validator ( $options ) {
 	return $options;
+}
+
+function did2_ab_testing_enqueue_scripts() {
+	wp_enqueue_style('did2_ab_testing_style',  plugins_url('style.css', __FILE__), array());
+	wp_enqueue_script('did2_ab_testing_style',  plugins_url('ace/src-noconflict/ace.js', __FILE__), array('jquery'));
 }
 
 function duplicate_theme( $from_theme_dir_name, $to_theme_dir_name = '', $to_theme_name = '') {
@@ -230,8 +238,8 @@ https://support.google.com/adsense/answer/1354736?hl=en
 <form name="did_ab_testing_duplicate_template_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
 	<?php wp_nonce_field('did2_ab_testing_duplicate', 'did2_ab_testing_nonce'); ?>
 	<input type="hidden" name="action" value="duplicate">
-	<table class="google-account">
-	<tbody id="google-account">
+	<table class="">
+	<tbody id=">
 	<tr valign="center">
 		<th scope="row" style="text-align: left;">Copy FROM</th>
 		<td>
@@ -269,6 +277,39 @@ https://support.google.com/adsense/answer/1354736?hl=en
 	>
 </form>
 
+<h2>Diff Two Templates</h2>
+
+<form name="did_ab_testing_diff_template_form" method="get" action="tools.php">
+	<input type="hidden" name="page" value="did2-ab-testing/diff-themes.php">
+	<input type="hidden" name="actioon" value="diff">
+			<select name="theme_a">
+				<?php
+				$themes = wp_get_themes();
+				foreach( $themes as $theme_dir_name => $theme ) {
+				?>
+					<option value="<?php echo $theme_dir_name; ?>"><?php echo $theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?></option>	
+				<?php
+				}
+				?>
+			</select>
+
+			<select name="theme_b">
+				<?php
+				$themes = wp_get_themes();
+				foreach( $themes as $theme_dir_name => $theme ) {
+				?>
+					<option value="<?php echo $theme_dir_name; ?>"><?php echo $theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?></option>	
+				<?php
+				}
+				?>
+			</select>
+	<input
+		type="submit"
+		name="submit"
+		class="button button-primary"
+		value="Show Diff"
+	>
+</form>
 <?php
 }
 

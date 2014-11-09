@@ -289,20 +289,6 @@ function diff_themes( $theme_a_dir_name, $theme_b_dir_name) {
 		}
 
 		$html .= "</script>";
-
-		//echo '<br />begin';
-		//$options = array();
-		// $diff = new Diff(esc_html($a), esc_html($b), $options);
-		//$diff = new Diff($a, $b, $options);
-		//$diff = new Diff('aa', 'bbaa', $options);
-		//echo '<br />end';
-		//echo '<pre>' . esc_html(var_dump($diff)) . '</pre>';
-
-		//$renderer = new Diff_Renderer_Html_SideBySide;
-		//echo '<br />begin render<br />';
-		//echo var_dump($renderer);
-		//echo $diff->render($renderer);	
-		//echo '<br />end render';
 	}
 
 	$filetable .= '</tbody></table>';

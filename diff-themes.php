@@ -72,9 +72,6 @@ function did2_ab_testing_creage_diff_themes_form() {
 function diff_themes( $theme_a_dir_name, $theme_b_dir_name) {
 	global $wp_filesystem;
 	//require_once(ABSPATH . 'wp-admin/includes/file.php');
-	require_once dirname(__FILE__) . '/php-diff/lib/Diff.php';
-	require_once dirname(__FILE__) . '/php-diff/lib/Diff/Renderer/Html/SideBySide.php';
-	require_once dirname(__FILE__) . '/php-diff/lib/Diff/Renderer/Html/Inline.php';
 	require_once dirname(__FILE__) . '/finediff/finediff.php';
 
 	$theme_a = wp_get_theme( $theme_a_dir_name );
@@ -249,16 +246,40 @@ function diff_themes( $theme_a_dir_name, $theme_b_dir_name) {
 		$html .= $diff_without_entities;
 		$html .= '</pre>';
 
+		$html .= '<script>';
 		$html .= "
-			<script>
-				var editor = ace.edit('editor-$name');
-				editor.getSession().setUseWorker(false);
-				editor.setTheme('ace/theme/github');
-				editor.getSession().setMode('ace/mode/php');
-				editor.setReadOnly(true);
+			var editor = ace.edit('editor-$name');
+			editor.getSession().setUseWorker(false);
+			editor.setTheme('ace/theme/github');
+			editor.setReadOnly(true);
+			var Range = ace.require('ace/range').Range;
+		";
 
-				var Range = ace.require('ace/range').Range;
-			";
+		$ext = strtoupper( preg_replace('/^.*\.([^.]+)$/D', '$1', $name) );
+		$ace_mode = '';
+		switch ( $ext ) {
+			case 'PHP':
+				$ace_mode = 'php';
+				break;
+			case 'CSS':
+				$ace_mode = 'css';
+				break;
+			case 'JS':
+				$ace_mode = 'javascript';
+				break;
+			case 'HTM':
+			case 'HTML':
+				$ace_mode = 'html';
+				break;
+			case 'JSON':
+				$ace_mode = 'json';
+				break;
+			default:
+				$ace_mode = '';
+				break;
+		}
+		$html .= "editor.getSession().setMode('ace/mode/$ace_mode');\n";
+
 		foreach( $line_num_ins as $line_num ) {
 			$html .= "editor.session.addMarker(new Range($line_num,0,$line_num,200), 'did2_ace_ins-line', 'fullLine', false);\n";
 		}
@@ -293,26 +314,6 @@ function diff_themes( $theme_a_dir_name, $theme_b_dir_name) {
 	echo $filetable;
 
 	echo '<h2>Details</h2>';
-
-		$html .= "<style type='text/css' media='screen'>
-    #editor { 
-        /* position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0; */
-	height: 275px;
-    }
-</style>
-			<div id='editor'>function</div>
-			<script>
-				var editor = ace.edit('editor');
-//				editor.getSession().setUseWorker(false);
-				editor.setTheme('ace/theme/monokai');
-//				editor.getSession().setMode('ace/mode/javascript');
-			</script>
-			";
-
 	echo $html;
 }
 

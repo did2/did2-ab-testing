@@ -12,13 +12,16 @@ License: GPL2
 
 define( 'DID2AB_PATH' , dirname( __FILE__ ) );
 require_once dirname(__FILE__) . '/diff-themes.php';
+require_once dirname(__FILE__) . '/theme-editor.php';
 
 if( is_admin() ) {
 	// require_once( DID2AB_PATH . '/did2-ab-testing-admin.php' );
 	add_action('admin_init', 'did2_ab_testing_register_setting' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_diff_themes' );
+	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_theme_editor' );
 	add_action('admin_enqueue_scripts', 'did2_ab_testing_enqueue_scripts');
+	add_action('load-tools_page_did2_ab_testing_theme_editor', 'did2_ab_testing_theme_editor_can_redirect_hook' );
 }
 add_action( 'init' , 'did2_ab_testing_init_session_start' );
 add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );

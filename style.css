@@ -47,3 +47,7 @@ pre.diff del, .did2_ace_del-line {
 	background: #fdd;
 	/* text-decoration: none; */
 }
+
+div#editor {
+	height: 500px;
+}

@@ -3,7 +3,7 @@
 Plugin Name: Did2 AB Testing 
 Plugin URI: http://did2memo.net/
 Description:
-	for did2's ab testing
+	plugin for did2's ab testing
 Version: 1.0.0
 Author: did2
 Author URI: http://did2memo.net/
@@ -13,6 +13,7 @@ License: GPL2
 define( 'DID2AB_PATH' , dirname( __FILE__ ) );
 require_once dirname(__FILE__) . '/diff-themes.php';
 require_once dirname(__FILE__) . '/theme-editor.php';
+require_once dirname(__FILE__) . '/plugin-editor.php';
 
 if( is_admin() ) {
 	// require_once( DID2AB_PATH . '/did2-ab-testing-admin.php' );
@@ -20,13 +21,17 @@ if( is_admin() ) {
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_diff_themes' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_theme_editor' );
-	add_action('admin_enqueue_scripts', 'did2_ab_testing_enqueue_scripts');
 	add_action('load-tools_page_did2_ab_testing_theme_editor', 'did2_ab_testing_theme_editor_can_redirect_hook' );
-}
+	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_plugin_editor' );
+	add_action('load-tools_page_did2_ab_testing_plugin_editor', 'did2_ab_testing_plugin_editor_can_redirect_hook' );
+
+	add_action('admin_enqueue_scripts', 'did2_ab_testing_enqueue_scripts');
+
 add_action( 'init' , 'did2_ab_testing_init_session_start' );
 add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );
 add_filter( 'template' , 'did2_ab_testing_template_filter' );
 add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
+}
 
 function did2_ab_testing_admin_menu_hook() {
 	$hook = add_options_page( 'did2 A/B Testing' , 'did2 A/B Testing' , 'manage_options' , 'did2_ab_testing_options' , 'did2_ab_testing_options_page' );
@@ -242,7 +247,7 @@ https://support.google.com/adsense/answer/1354736?hl=en
 	<?php wp_nonce_field('did2_ab_testing_duplicate', 'did2_ab_testing_nonce'); ?>
 	<input type="hidden" name="action" value="duplicate">
 	<table class="">
-	<tbody id=">
+	<tbody id="">
 	<tr valign="center">
 		<th scope="row" style="text-align: left;">Copy FROM</th>
 		<td>

@@ -146,7 +146,7 @@ function did2_ab_testing_create_theme_editor_editor() {
 		</p>		
 		<?php endif; ?>
 		<ul>
-	<?php
+		<?php
 		endif;
 		foreach ( $allowed_files as $filename => $absolute_filename ) :
 			if ( 'style.css' == $filename )
@@ -156,12 +156,12 @@ function did2_ab_testing_create_theme_editor_editor() {
 				$file_description .= '<br /><span class="nonessential">(' . $filename . ')</span>';
 			if ( $absolute_filename == $file )
 				$file_description = '<span class="highlight">' . $file_description . '</span>';
-	?>
+			?>
 			<li><a href="<?php echo self_admin_url('tools.php?page=did2_ab_testing_theme_editor'); ?>&file=<?php echo urlencode( $filename ) ?>&amp;theme=<?php echo urlencode( $stylesheet ) ?>"><?php echo $file_description; ?></a></li>
-	<?php
+			<?php
 		endforeach;
-	?>
-	</ul>
+		?>
+		</ul>
 	<?php endif; ?>
 	</div>
 	<?php if ( $error ) :
@@ -205,16 +205,12 @@ function did2_ab_testing_create_theme_editor_editor() {
 	<br class="clear" />
 	<script type="text/javascript">
 	/* <![CDATA[ */
-	jQuery(document).ready(function($){
-		$('#template').submit(
-			function(){ $('#scrollto').val( $('#newcontent').scrollTop() ); }
-		);
-		$('#newcontent').scrollTop( $('#scrollto').val() );
-	});
-	/* ]]> */
-	</script>
-	<script type="text/javascript">
-	/* <![CDATA[ */
+		jQuery(document).ready(function($){
+			$('#template').submit(
+				function(){ $('#scrollto').val( $('#newcontent').scrollTop() ); }
+			);
+			$('#newcontent').scrollTop( $('#scrollto').val() );
+		});
 		var textarea = jQuery('textarea#newcontent');
 		textarea.hide();
 		var editor = ace.edit('editor');
@@ -231,69 +227,6 @@ function did2_ab_testing_create_theme_editor_editor() {
 	<?php
 	break;
 	}
-
-
-
-
-
-
-/*
-	?>
-	<form name="did_ab_testing_theme_editor_form" method="post" action="tools.php">
-	<input type="hidden" name="page" value="did2-ab-testing/theme-editor.php">
-	<input type="hidden" name="action" value="edit_theme">
-			<select name="theme">
-				<?php
-				$themes = wp_get_themes();
-				foreach( $themes as $theme_dir_name => $a_theme ) {
-				?>
-
-					<option
-						value="<?php echo $theme_dir_name; ?>"
-						<?php if ( $theme == $a_theme ) echo 'selected'; ?>
-					>
-						<?php echo $a_theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?>
-					</option>	
-				<?php
-				}
-				?>
-			</select>
-
-			<select name="file">
-				<?php
-				$themes = wp_get_themes();
-				foreach( $themes as $theme_dir_name => $theme ) {
-				?>
-					<option
-						value="<?php echo $theme_dir_name; ?>"
-						<?php if ( isset($_GET['theme_b']) && $_GET['theme_b'] == $theme_dir_name ) echo 'selected'; ?>
-					>
-						<?php echo $theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?>
-					</option>
-				<?php
-				}
-				?>
-			</select>
-	<input
-		type="submit"
-		name="submit"
-		class="button button-primary"
-		value="Show Diff"
-	>
-</form>
-	<?php
-	if ( isset($_GET['theme_a']) && isset($_GET['theme_b']) ) :
-	?>
-
-	<?php
-	//echo 'diff:';
-	diff_themes( $_GET['theme_a'], $_GET['theme_b'] );
-	// echo $diff;
-	?>
-
-	<?php
-	endif;
-*/
 }
 
 function did2_ab_testing_theme_editor_can_redirect_hook() {

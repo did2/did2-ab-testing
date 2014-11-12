@@ -308,7 +308,6 @@ function did2_ab_testing_plugin_editor_can_redirect_hook() {
 	$scrollto = isset($_REQUEST['scrollto']) ? (int) $_REQUEST['scrollto'] : 0;
 	switch ( $action ) {
 	case 'update':
-wp_die('update');
 		check_admin_referer('edit-plugin_' . $file);
 		$newcontent = wp_unslash( $_POST['newcontent'] );
 		if ( is_writeable($real_file) ) {
@@ -322,6 +321,12 @@ wp_die('update');
 					deactivate_plugins($file, true);
 				if ( ! is_network_admin() )
 					update_option( 'recently_activated', array( $file => time() ) + (array) get_option( 'recently_activated' ) );
+
+				if ( strpos($file, 'did2-ab-testing/') === 0 ) {
+					wp_redirect(add_query_arg('_wpnonce', wp_create_nonce('edit-plugin-test_' . $file), "plugin-editor.php?file=$file&liveupdate=1&scrollto=$scrollto&networkwide=" . $network_wide));
+					exit;
+				}
+
 				wp_redirect(
 					add_query_arg(
 						'_wpnonce',
@@ -330,11 +335,9 @@ wp_die('update');
 					)
 				);
 				exit;
-			}
-wp_die('test1');
+			}		
 			wp_redirect( self_admin_url("tools.php?page=did2_ab_testing_plugin_editor&file=$file&a=te&scrollto=$scrollto") );
 		} else {
-wp_die('test1-2');
 			wp_redirect( self_admin_url("tools.php?page=did2_ab_testing_plugin_editor&file=$file&scrollto=$scrollto") );
 		}
 		exit;
@@ -351,11 +354,23 @@ wp_die('test1-2');
 					self_admin_url("tools.php?page=did2_ab_testing_plugin_editor&file=$file&phperror=1"),
 					! empty( $_GET['networkwide'] )
 				); // we'll override this later if the plugin can be included without fatal error
-wp_die('test2');
 			wp_redirect( self_admin_url("tools.php?page=did2_ab_testing_plugin_editor&file=$file&a=te&scrollto=$scrollto") );
 			exit;
 		}
 		break;
+	}	
+}
+
+function did2_ab_testing_plugin_editor_come_back_redirect() {
+	if ( $_SERVER['PHP_SELF'] == '/wp-admin/plugin-editor.php' && isset($_GET['a']) && ! isset($_GET['phperror'])) {
+		if ( isset($_GET['file']) && $_GET['file'] == 'did2-ab-testing/plugin-editor.php' ) {
+			$file = $_GET['file'];
+			$a = $_GET['a'];
+			$scrollto = $_GET['scrollto'];
+			wp_redirect(self_admin_url("tools.php?page=did2_ab_testing_plugin_editor&file=$file&a=te&scrollto=$scrollto"));
+			exit;
+		}
 	}
 }
+
 ?>

@@ -3,7 +3,7 @@
 Plugin Name: Did2 AB Testing 
 Plugin URI: http://did2memo.net/
 Description:
-	plugin for did2's ab testing
+	for did2's ab testing
 Version: 1.0.0
 Author: did2
 Author URI: http://did2memo.net/
@@ -18,6 +18,7 @@ require_once dirname(__FILE__) . '/plugin-editor.php';
 if( is_admin() ) {
 	// require_once( DID2AB_PATH . '/did2-ab-testing-admin.php' );
 	add_action('admin_init', 'did2_ab_testing_register_setting' );
+	add_action('admin_init', 'did2_ab_testing_plugin_editor_come_back_redirect' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_diff_themes' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_theme_editor' );

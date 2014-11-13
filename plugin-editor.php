@@ -156,7 +156,7 @@ function did2_ab_testing_create_plugin_editor_editor() {
 
 	<div class="fileedit-sub">
 	<div class="alignleft">
-	<big><?php
+	<big id="editting-file-name"><?php
 		if ( is_plugin_active($plugin) ) {
 			if ( is_writeable($real_file) )
 				echo sprintf(__('Editing <strong>%s</strong> (active)'), $file);
@@ -268,6 +268,17 @@ function did2_ab_testing_create_plugin_editor_editor() {
 
 		jQuery('form#template input#submit').on('click', function() {
 			textarea.val(editor.getSession().getValue());
+		});
+		
+		var modified = jQuery('<span id="modified">*</span>');
+		modified.hide();
+		jQuery('#editting-file-name').after(modified);
+		editor.on('input', function() {
+		    if(textarea.val() !== editor.getSession().getValue()) {
+		        modified.show();
+		    } else {
+		        modified.hide();
+		    }
 		});
 	/* ]]> */
 	</script>

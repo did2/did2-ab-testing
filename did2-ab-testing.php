@@ -3,7 +3,7 @@
 Plugin Name: Did2 AB Testing 
 Plugin URI: http://did2memo.net/
 Description:
-	for did2's ab testing
+	A WordPress plugin for did2's ab testing
 Version: 1.0.0
 Author: did2
 Author URI: http://did2memo.net/
@@ -18,20 +18,15 @@ require_once dirname(__FILE__) . '/plugin-editor.php';
 if( is_admin() ) {
 	// require_once( DID2AB_PATH . '/did2-ab-testing-admin.php' );
 	add_action('admin_init', 'did2_ab_testing_register_setting' );
-	add_action('admin_init', 'did2_ab_testing_plugin_editor_come_back_redirect' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook' );
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_diff_themes' );
-	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_theme_editor' );
-	add_action('load-tools_page_did2_ab_testing_theme_editor', 'did2_ab_testing_theme_editor_can_redirect_hook' );
-	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_plugin_editor' );
-	add_action('load-tools_page_did2_ab_testing_plugin_editor', 'did2_ab_testing_plugin_editor_can_redirect_hook' );
 
 	add_action('admin_enqueue_scripts', 'did2_ab_testing_enqueue_scripts');
 
-add_action( 'init' , 'did2_ab_testing_init_session_start' );
-add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );
-add_filter( 'template' , 'did2_ab_testing_template_filter' );
-add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
+	add_action( 'init' , 'did2_ab_testing_init_session_start' );
+	add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );
+	add_filter( 'template' , 'did2_ab_testing_template_filter' );
+	add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
 }
 
 function did2_ab_testing_admin_menu_hook() {

@@ -1,12 +1,16 @@
 <?php
 
+if ( is_admin() ) {
+    add_action('admin_init', 'did2_ab_testing_plugin_editor_come_back_redirect' );
+    add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_plugin_editor' );
+	add_action('load-tools_page_did2_ab_testing_plugin_editor', 'did2_ab_testing_plugin_editor_can_redirect_hook' );
+}
+
 function did2_ab_testing_admin_menu_hook_plugin_editor() {
 	add_management_page('Plugin Editor - Did2 AB Testing', 'Plugin Editor', 'edit_plugins', 'did2_ab_testing_plugin_editor', 'did2_ab_testing_create_plugin_editor_page');
 	
 	add_action('admin_print_scripts', 'did2_ab_testing_plugin_editor_js');
 }
-
-add_action('wp_ajax_did2_ab_testing_ajax_syntax_check_action', 'did2_ab_testing_ajax_syntax_check_action_callback');
 
 function did2_ab_testing_create_plugin_editor_page() {
 	?>
@@ -330,7 +334,9 @@ function did2_ab_testing_plugin_editor_can_redirect_hook() {
 				if ( ! is_network_admin() )
 					update_option( 'recently_activated', array( $file => time() ) + (array) get_option( 'recently_activated' ) );
 
-				if ( strpos($file, 'did2-ab-testing/') === 0 ) {
+				if ( strpos($file, 'did2-ab-testing/') !== false ) {
+				    // redirect to original plugin editor, and then come back to this plugin editor by 'did2_ab_testing_plugin_editor_come_back_redirect' hook
+				    $scrollto = - ($scrollto + 1);
 					wp_redirect(add_query_arg('_wpnonce', wp_create_nonce('edit-plugin-test_' . $file), "plugin-editor.php?file=$file&liveupdate=1&scrollto=$scrollto&networkwide=" . $network_wide));
 					exit;
 				}
@@ -371,12 +377,14 @@ function did2_ab_testing_plugin_editor_can_redirect_hook() {
 
 function did2_ab_testing_plugin_editor_come_back_redirect() {
 	if ( $_SERVER['PHP_SELF'] == '/wp-admin/plugin-editor.php' && isset($_GET['a']) && ! isset($_GET['phperror'])) {
-		if ( isset($_GET['file']) && $_GET['file'] == 'did2-ab-testing/plugin-editor.php' ) {
-			$file = $_GET['file'];
-			$a = $_GET['a'];
-			$scrollto = $_GET['scrollto'];
-			wp_redirect(self_admin_url("tools.php?page=did2_ab_testing_plugin_editor&file=$file&a=te&scrollto=$scrollto"));
-			exit;
+		if ( isset($_GET['file']) ){//&& $_GET['file'] == 'did2-ab-testing/plugin-editor.php' ) {
+		    if ( isset($_GET['scrollto']) && $_GET['scrollto'] < 0) {// check if edited in did2 plugin editor or original plugin editor using scrollto parameter's sign.
+			    $file = $_GET['file'];
+			    $a = $_GET['a'];
+			    $scrollto = -($_GET['scrollto']+1);
+			    wp_redirect(self_admin_url("tools.php?page=did2_ab_testing_plugin_editor&file=$file&a=te&scrollto=$scrollto"));
+			    exit;
+		    }
 		}
 	}
 }
@@ -402,6 +410,8 @@ function did2_ab_testing_plugin_editor_js() {
     </script>
     <?php
 }
+
+add_action('wp_ajax_did2_ab_testing_ajax_syntax_check_action', 'did2_ab_testing_ajax_syntax_check_action_callback');
 
 function did2_ab_testing_ajax_syntax_check_action_callback() {
     //die("jQuery('#syntax_check_result').html('test')");

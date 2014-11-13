@@ -1,5 +1,10 @@
 <?php
 
+if ( is_admin() ) {
+    add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_theme_editor' );
+	add_action('load-tools_page_did2_ab_testing_theme_editor', 'did2_ab_testing_theme_editor_can_redirect_hook' );
+}
+
 function did2_ab_testing_admin_menu_hook_theme_editor() {
 	add_management_page('Theme Editor - Did2 AB Testing', 'Theme Editor', 'edit_themes', 'did2_ab_testing_theme_editor', 'did2_ab_testing_create_theme_editor_page');
 }

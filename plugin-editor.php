@@ -238,8 +238,11 @@ function did2_ab_testing_create_plugin_editor_editor() {
 			} else {
 				submit_button( __( 'Update File' ), 'primary', 'submit', false );
 				?>
+				<br />
 				<input type="button" value="Syntax Check (php -l)" onclick="did2_ab_testing_ajax_syntax_check();" />
-				<div id="syntax_check_result"></div>
+				<div id="syntax-check-result"></div>
+				<input type="button" value="Make sure file is branched" onclick="did2_ab_testing_ajax_branch_check();" />
+				<div id="branch-check-result"></div>
 				<?php
 			}
 		?>
@@ -250,6 +253,13 @@ function did2_ab_testing_create_plugin_editor_editor() {
 	</form>
 	<br class="clear" />
 	</div>
+
+	<script type="text/javascript">
+	/* <![CDATA[ */
+	var file = '<?php echo $file; ?>';
+	var original_code = '<?php echo preg_replace('/\r\n/', '\n', $content); ?>';
+	/* ]]> */
+	</script>
 	<script type="text/javascript">
 	/* <![CDATA[ */
 		jQuery(document).ready(function($){
@@ -269,17 +279,17 @@ function did2_ab_testing_create_plugin_editor_editor() {
 		jQuery('form#template input#submit').on('click', function() {
 			textarea.val(editor.getSession().getValue());
 		});
-		
-		var modified = jQuery('<span id="modified">*</span>');
-		modified.hide();
-		jQuery('#editting-file-name').after(modified);
-		editor.on('input', function() {
-		    if(textarea.val() !== editor.getSession().getValue()) {
-		        modified.show();
-		    } else {
-		        modified.hide();
-		    }
-		});
+
+        var modified = jQuery('<span id="modified">*</span>');
+        modified.hide();
+        jQuery('#editting-file-name').after(modified);
+        editor.on('input', function() {
+            if(textarea.val() !== editor.getSession().getValue()) {
+                modified.show();
+            } else {
+                modified.hide();
+            }
+        });
 	/* ]]> */
 	</script>
 	<?php
@@ -400,65 +410,120 @@ function did2_ab_testing_plugin_editor_come_back_redirect() {
 	}
 }
 
+// ============================================================
+// AJAX
+// ============================================================
+
+// insert javascript functions for AJAX
 function did2_ab_testing_plugin_editor_js() {
     wp_print_scripts(array( 'sack' ));
     wp_print_scripts(array( 'jQuery' ));
     ?>
     <script type="text/javascript">
     /* <![CDATA[ */
+    var lang = 'PHP';
     function did2_ab_testing_ajax_syntax_check() {
-    var mysack = new sack( "<?php bloginfo( 'wpurl' ); ?>/wp-admin/admin-ajax.php" );    
-    mysack.execute = 1;
-    mysack.method = 'POST';
-    mysack.setVar( "action", "did2_ab_testing_ajax_syntax_check_action" );
-    mysack.setVar( "lang", "PHP" );
-    mysack.setVar( "code", editor.getSession().getValue() );
-    mysack.encVar( "cookie", document.cookie, false );
-    mysack.onError = function() { jQuery('#syntax_check_result').html('Syntax check failure (AJAX Error).') };
-    mysack.runAJAX();
+        var mysack = new sack( "<?php bloginfo( 'wpurl' ); ?>/wp-admin/admin-ajax.php" );    
+        mysack.execute = 1;
+        mysack.method = 'POST';
+        mysack.setVar( "action", "did2_ab_testing_ajax_syntax_check_action" );
+        mysack.setVar( "nonce", "<?php echo wp_create_nonce('did2_ab_testing_ajax_syntax_check'); ?>");
+        mysack.setVar( "lang", lang );
+        mysack.setVar( "code", editor.getSession().getValue() );
+        mysack.encVar( "cookie", document.cookie, false );
+        mysack.onError = function() { jQuery('#syntax-check-result').html('Syntax check failure (AJAX Error).') };
+        mysack.runAJAX();
+    }
+    function did2_ab_testing_ajax_branch_check() {
+        var mysack = new sack( "<?php bloginfo( 'wpurl' ); ?>/wp-admin/admin-ajax.php" );    
+        mysack.execute = 1;
+        mysack.method = 'POST';
+        mysack.setVar( "action", "did2_ab_testing_ajax_branch_check_action" );
+        mysack.setVar( "nonce", "<?php echo wp_create_nonce('did2_ab_testing_ajax_branch_check'); ?>");
+        mysack.setVar( "lang", lang );
+        //mysack.setVar( "code", original_code );
+        mysack.setVar( "code", textarea.val() );
+        //mysack.setVar( "code", editor.getSession().getValue() );
+        mysack.setVar( "file", file );
+        mysack.encVar( "cookie", document.cookie, false );
+        mysack.onError = function() { jQuery('#branch-check-result').html('Branch check failure (AJAX Error).') };
+        mysack.runAJAX();
     }
     /* ]]> */
     </script>
     <?php
 }
 
+// add_action('wp_ajax_AJAX_ACTION_NAME', 'callback_function_name')
+// ajax action name : did2_ab_testing_ajax_XXX_action (POST parameter "action" set to "did2_ab_testing_ajax_XXX_action")
+// ajax action callback name : did2_ab_testing_ajax_XXX_action_callback
 add_action('wp_ajax_did2_ab_testing_ajax_syntax_check_action', 'did2_ab_testing_ajax_syntax_check_action_callback');
-
 function did2_ab_testing_ajax_syntax_check_action_callback() {
-    //die("jQuery('#syntax_check_result').html('test')");
+    check_ajax_referer( 'did2_ab_testing_ajax_syntax_check', 'nonce');
     $lang = $_POST['lang'];
     $code = wp_unslash($_POST['code']); // remove escape characters from escaped $code in the POST parameter.
     
-    $tmp_file_dir = WP_PLUGIN_DIR . '/did2-ab-testing/tmp';
-    $tmp_file_path = $tmp_file_dir . '/syntax-check-target-' . date('Yhis') . '.tmp';
+    if ( $lang == 'PHP') {
+        $tmp_file_dir = WP_PLUGIN_DIR . '/did2-ab-testing/tmp';
+        $tmp_file_path = $tmp_file_dir . '/syntax-check-target-' . date('Yhis') . '.tmp';
     
-    if ( ! file_exists($tmp_file_dir) ) {
-        mkdir($tmp_file_dir);
+        if ( ! file_exists($tmp_file_dir) ) {
+            mkdir($tmp_file_dir);
+        }
+    
+        if ( ! file_exists($tmp_file_dir) ) {
+            die("jQuery('#syntax-check-result').html('Could not prepare tmp dir: $tmp_file_dir');");
+        }
+    
+        if ( ! is_writable($tmp_file_dir) ) {
+            die("jQuery('#syntax-check-result').html('Could not write tmp dir: $tmp_file_dir');");
+        }
+    
+        $f = fopen($tmp_file_path, 'w');
+        fwrite($f, $code);
+        fclose($f);
+    
+        /* require_once( ABSPATH . WPINC . '/class-snoopy.php');*/
+        $output = '';
+        /*$code = '<?php echo "test"; ?>';*/
+        /*$code = preg_replace('\?', '');*/
+        /*$command = sprintf('echo %s | php -l', escapeshellarg($code));*/
+        $command = "php -l $tmp_file_path 2>&1";
+        $result = exec($command, $output);
+        //die("jQuery('#syntax-check-result').html('" . $result . '<br />' . implode('<br />', $output) . count($output) . $command . "')");
+        $output = implode('<br />', $output);
+        $output = preg_replace('#' . $tmp_file_path . '#i', 'Editing Code', $output);
+        die('jQuery("#syntax-check-result").html("' . $output . '")');
+    } else {
+        die('jQuery("#syntax-check-result").html("' . 'unsupported code' . '")');
     }
-    
-    if ( ! file_exists($tmp_file_dir) ) {
-        die("jQuery('#syntax_check_result').html('Could not prepare tmp dir: $tmp_file_dir');");
-    }
-    
-    if ( ! is_writable($tmp_file_dir) ) {
-        die("jQuery('#syntax_check_result').html('Could not write tmp dir: $tmp_file_dir');");
-    }
-    
-    $f = fopen($tmp_file_path, 'w');
-    fwrite($f, $code);
-    fclose($f);
-    
-    /* require_once( ABSPATH . WPINC . '/class-snoopy.php');*/
-    $output = '';
-    /*$code = '<?php echo "test"; ?>';*/
-    /*$code = preg_replace('\?', '');*/
-    /*$command = sprintf('echo %s | php -l', escapeshellarg($code));*/
-    $command = "php -l $tmp_file_path 2>&1";
-    $result = exec($command, $output);
-    //die("jQuery('#syntax_check_result').html('" . $result . '<br />' . implode('<br />', $output) . count($output) . $command . "')");
-    $output = implode('<br />', $output);
-    $output = preg_replace('#' . $tmp_file_path . '#i', 'Editing Code', $output);
-    die('jQuery("#syntax_check_result").html("' . $output . '")');
+}
+
+add_action('wp_ajax_did2_ab_testing_ajax_branch_check_action', 'did2_ab_testing_ajax_branch_check_action_callback');
+function did2_ab_testing_ajax_branch_check_action_callback() {
+    check_ajax_referer( 'did2_ab_testing_ajax_branch_check', 'nonce');
+    $lang = $_POST['lang'];
+    $code = wp_unslash($_POST['code']); // remove escape characters from escaped $code in the POST parameter.
+    $file = $_POST['file'];
+    // $file = validate_file_to_edit($file, $plugin_files);
+	$real_file = WP_PLUGIN_DIR . '/' . $file;
+	if ( ! is_file($real_file) ) {
+	    die('jQuery("#branch-check-result").html("' . 'no file error' . '")');
+	}
+	$content = file_get_contents( $real_file );
+	//$content = esc_textarea(file_get_contents( $real_file ));
+	// $content = esc_textarea( $content );
+	$content = str_replace(array("\r\n", "\n", "\r"), "\n", $content);
+	$code = str_replace(array("\r\n", "\n", "\r"), "\n", $code);
+	if ( $content === false) {
+	    die('jQuery("#branch-check-result").html("' . 'file read failure error' . '")');
+	}
+	if ( $content == $code ) {
+        die('jQuery("#branch-check-result").html("&quot;' . $real_file . '&quot; is not branched' . '")');
+	} else {
+        die('jQuery("#branch-check-result").html("&quot;' . $real_file . '&quot; is branched!' . mb_strlen($content) . '/' . mb_strlen(str_replace(array("\r\n", "\n", "\r"), "\n", $content)) . '/' . mb_strlen($code) . '//' . mb_strlen(esc_textarea($content)) . '")');
+        //die('jQuery("#branch-check-result").html("&quot;' . $real_file . '&quot; is branched!' . '")');
+	}
 }
 
 ?>

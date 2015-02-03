@@ -87,7 +87,8 @@ function did2_ab_testing_create_theme_editor_editor() {
 		if ( ! $error && filesize( $file ) > 0 ) {
 			$f = fopen($file, 'r');
 			$content = fread($f, filesize($file));
-			if ( '.php' == substr( $file, strrpos( $file, '.' ) ) ) {
+			$file_ext = substr( $file, strrpos( $file, '.' ) );
+			if ( '.php' == $file_ext ) {
 				$functions = wp_doc_link_parse( $content );
 				$docs_select = '<select name="docs-list" id="docs-list">';
 				$docs_select .= '<option value="">' . esc_attr__( 'Function Name&hellip;' ) . '</option>';
@@ -221,7 +222,14 @@ function did2_ab_testing_create_theme_editor_editor() {
 		var editor = ace.edit('editor');
 		//editor.getSession().setUseWorker(false);
 		editor.setTheme('ace/theme/github');
-		editor.getSession().setMode('ace/mode/php');
+		<?php if ( '.php' == $file_ext ) : ?>
+			editor.getSession().setMode('ace/mode/php');
+		<?php elseif ( '.css' == $file_ext ) : ?>
+			editor.getSession().setMode('ace/mode/css');
+		<?php else : ?>
+			editor.getSession().setMode('ace/mode/php');
+		<?php endif; ?>
+		editor.getSession().useSoftTabs(false);
 		//jQuery('div#editor').height = 500;
 
 		jQuery('form#template input#submit').on('click', function() {

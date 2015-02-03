@@ -10,6 +10,8 @@ Author URI: http://did2memo.net/
 License: GPL2  
 */
 
+session_start ();
+
 define( 'DID2AB_PATH' , dirname( __FILE__ ) );
 require_once dirname(__FILE__) . '/diff-themes.php';
 require_once dirname(__FILE__) . '/theme-editor.php';
@@ -22,11 +24,15 @@ if( is_admin() ) {
 	add_action('admin_menu', 'did2_ab_testing_admin_menu_hook_diff_themes' );
 
 	add_action('admin_enqueue_scripts', 'did2_ab_testing_enqueue_scripts');
+}
 
-	add_action( 'init' , 'did2_ab_testing_init_session_start' );
-	add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );
-	add_filter( 'template' , 'did2_ab_testing_template_filter' );
-	add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
+//add_action( 'init' , 'did2_ab_testing_init_session_start' );
+add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );
+add_action( 'plugins_loaded' , 'did2_ab_testing_plugins_loaded' );
+
+function did2_ab_testing_plugins_loaded() {
+    add_filter( 'template' , 'did2_ab_testing_template_filter' );
+    add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
 }
 
 function did2_ab_testing_admin_menu_hook() {
@@ -362,24 +368,26 @@ function did2_ab_testing_setup_theme() {
 		$_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] = $themes[ $x_wp_template ][ 'Template' ];
 		$_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ] = $themes[ $x_wp_template ][ 'Stylesheet' ];
 	}
+	
+	return true;
 }
 
 function did2_ab_testing_template_filter( $template ) {
 	$t = $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ];
 	$s = $_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ];
-	if ($t == NULL || $s == NULL){
-		return $template;
+	if ($t != NULL && $s != NULL){
+		return $t;
 	}
-	return $t;
+	return $template;
 }
 
 function did2_ab_testing_stylesheet_filter( $stylesheet ) {
 	$t = $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ];
 	$s = $_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ];
-	if ($t == NULL || $s == NULL){
-		return $stylesheet;
+	if ($t != NULL && $s != NULL){
+		return $s;
 	}
-	return $s;
+	return $stylesheet;
 }
 
 // ------------------------------------------------------------
@@ -388,6 +396,7 @@ function did2_ab_testing_stylesheet_filter( $stylesheet ) {
 function did2_ab_testing_adsense_custom_channel_id() {
 	$options = get_option( 'did2_ab_testing_options' );
 	$theme_dir_name = wp_get_theme()->get_stylesheet();
+	//$theme_dir_name = $_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ];
 	if ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) ) {
 		return $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
 	} else {

@@ -157,17 +157,27 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 <div class="wrap">
 <h2>did2 A/B Testing Settings</h2>
 
+<?php if( ! get_option( 'did2_ab_testing_access_token') ) : ?>
+<h3>Google Auth Settings</h3>
+	<?php
+	require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
+	$auth = new AdSenseAuth();
+	$result = $auth->authenticate ( 'default' );
+	?>
+<?php endif; ?>
+
 <form method="post" action="options.php">
 <?php settings_fields( 'did2_ab_testing_options_group' ); ?>
 <?php do_settings_sections( 'did2_ab_testing_options_group' ); ?>
 <?php $options = get_option( 'did2_ab_testing_options' ); ?>
 
-<h3>Google Auth Settings</h3>
+<h3>Google Auth Settings(Old)</h3>
 
 <table class="google-account">
 <tbody id="google-account">
 <tr valign="top">
 	<th scope="row">Google Authorization Code for AdSense</th>
+	<?php if(false) : ?>
 	<td>
 		<input
 			type="text"
@@ -178,6 +188,7 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 		<br />
 		Input your authorization code you obtain in <a href="https://accounts.google.com/o/oauth2/auth?scope=https://www.googleapis.com/auth/adsense.readonly&response_type=code&access_type=offline&redirect_uri=urn:ietf:wg:oauth:2.0:oob&approval_prompt=auto&client_id=153026819782-lgu4cg9uepvvi9bj5fhd38v8nq70trr0.apps.googleusercontent.com&hl=ja&from_login=1&as=&pli=1&authuser=0" target="_blank" title="">google.com</a>.
 	</td>
+	<?php endif; ?>
 </tr>
 </tbody>
 </table>
@@ -190,6 +201,7 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 		<th>Theme</th>
 		<th>Ratio (%)</th>
 		<th>AdSense Custom Channel ID</th>
+		<th>RPM</th>
 	</tr>
 </thead>
 <tbody id="themes">
@@ -212,6 +224,53 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 			name="did2_ab_testing_options[adsense_custom_channel_id_<?php echo $theme_dir_name; ?>]"
 			value="<?php echo ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) ? $options[ "adsense_custom_channel_id_" . $theme_dir_name ] : 0 ); ?>"
 		>
+	</td>
+	<td>
+		<?php
+			/* AdSense */
+			if( get_option( 'did2_ab_testing_access_token') ){
+			require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
+			$auth = new AdSenseAuth();
+			$result = $auth->authenticate ( 'default' );
+			if ( $result ) {
+				$adSense = $auth->getAdSenseService();
+			}
+			
+			$query_adsense = "EARNINGS";
+			$from = date ( 'Y-m-d', time () - 14 * 24 * 60 * 60 );
+			$to = date ( 'Y-m-d', time () - 24 * 60 * 60 );
+			$optParams = array (
+				'metric' => array (
+					$query_adsense 
+				),
+				'dimension' => 'DATE',
+				'sort' => 'DATE',
+				'useTimezoneReporting' => 1//get_option ( 'gads_dash_timezone' ) 
+			);
+			try {
+				$serial = 'gadsdash_qr1' . str_replace ( array (
+					',',
+					'-',
+					date ( 'Y' ) 
+					), "", $from . $to . 1/*get_option ( 'gads_dash_timezone' )*/ . $query_adsense );
+				$transient = get_transient ( $serial );
+				if (empty ( $transient )) {
+					$data = $adSense->reports->generate ( $from, $to, $optParams );
+					set_transient ( $serial, $data, 60/*get_option ( 'gads_dash_cachetime' )*/ );
+					echo 'qqq';
+				} else {
+					$data = $transient;
+				}
+			} catch ( exception $e ) {
+				//if (get_option ( '_token' )) {
+					echo did2_ab_testing_pretty_error ( $e );
+					return;
+				//}
+			}
+			} else {
+				echo 'no access token';
+			}
+		?>
 	</td>
 </tr>
 <?php

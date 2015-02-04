@@ -274,7 +274,7 @@ function did2_ab_testing_create_plugin_editor_editor() {
 		//editor.getSession().setUseWorker(false);
 		editor.setTheme('ace/theme/github');
 		editor.getSession().setMode('ace/mode/php');
-		editor.getSession().useSoftTabs(false);
+		editor.getSession().setUseSoftTabs(false);
 		//jQuery('div#editor').height = 500;
 
 		jQuery('form#template input#submit').on('click', function() {

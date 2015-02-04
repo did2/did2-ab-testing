@@ -221,7 +221,7 @@ function did2_ab_testing_create_plugin_editor_editor() {
 			<input type="hidden" name="action" value="update" />
 			<input type="hidden" name="file" value="<?php echo esc_attr($file) ?>" />
 			<input type="hidden" name="plugin" value="<?php echo esc_attr($plugin) ?>" />
-			<input type="hidden" name="scrollto" id="scrollto" value="<?php echo $scrollto; ?>" />
+			<input type="hidden" name="scrollto" id="scrollto" value="<?php echo 15;/*$scrollto;*/ ?>" />
 			</div>
 			<?php if ( !empty( $docs_select ) ) : ?>
 			<div id="documentation" class="hide-if-no-js"><label for="docs-list"><?php _e('Documentation:') ?></label> <?php echo $docs_select ?> <input type="button" class="button" value="<?php esc_attr_e( 'Look Up' ) ?> " onclick="if ( '' != jQuery('#docs-list').val() ) { window.open( 'http://api.wordpress.org/core/handbook/1.0/?function=' + escape( jQuery( '#docs-list' ).val() ) + '&amp;locale=<?php echo urlencode( get_locale() ) ?>&amp;version=<?php echo urlencode( $wp_version ) ?>&amp;redirect=true'); }" /></div>
@@ -262,23 +262,21 @@ function did2_ab_testing_create_plugin_editor_editor() {
 	</script>
 	<script type="text/javascript">
 	/* <![CDATA[ */
-		jQuery(document).ready(function($){
-			$('#template').submit(
-				function(){ $('#scrollto').val( $('#newcontent').scrollTop() ); }
-			);
-			$('#newcontent').scrollTop( $('#scrollto').val() );
-		});
 		var textarea = jQuery('textarea#newcontent');
+		var scrollto = jQuery('input#scrollto');
 		textarea.hide();
 		var editor = ace.edit('editor');
 		//editor.getSession().setUseWorker(false);
 		editor.setTheme('ace/theme/github');
 		editor.getSession().setMode('ace/mode/php');
 		editor.getSession().setUseSoftTabs(false);
+		editor.getSession().setScrollTop( <?php echo $scrollto; ?> );
 		//jQuery('div#editor').height = 500;
 
 		jQuery('form#template input#submit').on('click', function() {
 			textarea.val(editor.getSession().getValue());
+			scrollto.val(editor.getSession().getScrollTop());
+			//scrollto.val(10);
 		});
 
         var modified = jQuery('<span id="modified">*</span>');
@@ -291,6 +289,15 @@ function did2_ab_testing_create_plugin_editor_editor() {
                 modified.hide();
             }
         });
+        
+        jQuery(document).ready(function($){
+			/*$('#template').submit(
+				function(){ $('#scrollto').val( $('#newcontent').scrollTop() ); }
+			);*/
+			//$('#newcontent').scrollTop( $('#scrollto').val() );
+			//editor.getSession().setScrollTop( <?php echo $scrollto; ?> );
+			editor.focus();
+		});
 	/* ]]> */
 	</script>
 	<?php

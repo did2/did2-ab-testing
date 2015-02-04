@@ -144,6 +144,7 @@ function did2_ab_testing_process_post() {
 
 // generate options page
 function did2_ab_testing_options_page() {
+session_start();
 
 if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 	?>
@@ -155,7 +156,73 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 ?>
 
 <div class="wrap">
-<h2>did2 A/B Testing Settings</h2>
+<h2>Auth Services</h2>
+
+<?php if ( ! get_option( 'did2_ab_testing_auth_google_adsense_token' ) ) : ?>
+<h3>Google Adsense Authentication</h3>
+<?php
+	set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
+	set_include_path ( DID2AB_PATH . '/google-api-php-client-examples/examples/'. PATH_SEPARATOR . get_include_path () );
+	require_once 'Google/Client.php';
+	require_once 'Google/Service/AdSense.php';
+	
+	$client = new Google_Client();
+	$client->addScope('https://www.googleapis.com/auth/adsense.readonly');
+	$client->setAccessType('offline');
+	$client->setApplicationName ( 'did2 AB Testing' );
+	$client->setClientId ( '153026819782-lgu4cg9uepvvi9bj5fhd38v8nq70trr0.apps.googleusercontent.com' );
+	$client->setClientSecret ( 'wG4M8LOH5xHjjv1U8-i1L72-' );
+	//$client->setDeveloperKey ( 'AIzaSyCqDni7TvMUl_xWO7ktvQSacWqBbDbQFAU' );
+	$client->setRedirectUri( admin_url('options-general.php?page=did2_ab_testing_options&auth=google_adsense') );
+	
+	$service = new Google_Service_AdSense($client);
+	
+	if (isset($_REQUEST['logout'])) {
+		unset($_SESSION['access_token']);
+	}
+	
+	if ($_GET['auth'] == 'google_adsense' && isset($_GET['code'])) {
+		$client->authenticate($_GET['code']);
+		$_SESSION['access_token'] = $client->getAccessToken();
+		$redirect = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+		header('Location: ' . $redirect);
+		exit;
+	}
+	
+	if (isset($_SESSION['access_token]']) && $_SESSION['access_token']) {
+		$client->setAccessToken($_SESSION['access_token']);
+	}
+	
+	if ($client->getAccessToken()) {
+		echo '<pre class="result">';
+		$accounts = GetAllAccounts::run($service, 10);
+		if (isset($accounts) && !empty($accounts)) {
+			$exampleAccountId = $accounts[0]['id'];
+			GetAccountTree::run($service, $exampleAccountId);
+			$adClients = GetAllAdClients::run($service, $exampleAccountId, 10);
+			
+			/*if (isset($adClients) && !empty($adClients)) {
+				$exampleAdClient = end($adClients);
+				$exampleAdClientId = $exampleAdClient['id'];
+				$adUnits = GetAllAdUnits::run($service, $exampleAccountId, $exampleAdClientId, 10);
+				if (isset($adUnits) && !empty($adUnits)) {
+					$exampleAdUnitId = $adUnits[0]['id'];
+					$adUnits = GetAllAdUnits::run($service, $exampleAccountId, $exampleAdClientId, 10);
+					if (isset($adUnits )) {
+						
+					}
+				}
+			}*/
+		}
+		$_SESSION['access_token'] = $client->getAccessToken();
+		echo '</pre>';
+	} else {
+		echo 'no access token';
+	}
+?>
+<?php endif; ?>
+
+<h2>did2 A/B Testing Settings(Old)</h2>
 
 <?php if( ! get_option( 'did2_ab_testing_access_token') ) : ?>
 <h3>Google Auth Settings</h3>
@@ -227,6 +294,7 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 	</td>
 	<td>
 		<?php
+		if(false) {
 			/* AdSense */
 			if( get_option( 'did2_ab_testing_access_token') ){
 			require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
@@ -270,6 +338,7 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 			} else {
 				echo 'no access token';
 			}
+		}
 		?>
 	</td>
 </tr>

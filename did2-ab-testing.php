@@ -158,39 +158,26 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 <div class="wrap">
 <h2>Auth Services</h2>
 
-<?php if ( ! get_option( 'did2_ab_testing_auth_google_adsense_token' ) ) : ?>
+<?php if ( false && ! get_option( 'did2_ab_testing_auth_google_adsense_token' ) ) : ?>
 <h3>Google Adsense Authentication</h3>
 <?php
-	set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
-	set_include_path ( DID2AB_PATH . '/google-api-php-client-examples/examples/'. PATH_SEPARATOR . get_include_path () );
-	require_once 'Google/Client.php';
-	require_once 'Google/Service/AdSense.php';
-	
-	$client = new Google_Client();
-	$client->addScope('https://www.googleapis.com/auth/adsense.readonly');
-	$client->setAccessType('offline');
-	$client->setApplicationName ( 'did2 AB Testing' );
-	$client->setClientId ( '153026819782-lgu4cg9uepvvi9bj5fhd38v8nq70trr0.apps.googleusercontent.com' );
-	$client->setClientSecret ( 'wG4M8LOH5xHjjv1U8-i1L72-' );
-	//$client->setDeveloperKey ( 'AIzaSyCqDni7TvMUl_xWO7ktvQSacWqBbDbQFAU' );
-	$client->setRedirectUri( admin_url('options-general.php?page=did2_ab_testing_options&auth=google_adsense') );
-	
+	if(false):
 	$service = new Google_Service_AdSense($client);
 	
 	if (isset($_REQUEST['logout'])) {
-		unset($_SESSION['access_token']);
+		unset($_SESSION['token']);
 	}
 	
 	if ($_GET['auth'] == 'google_adsense' && isset($_GET['code'])) {
 		$client->authenticate($_GET['code']);
-		$_SESSION['access_token'] = $client->getAccessToken();
+		$_SESSION['token'] = $client->getAccessToken();
 		$redirect = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
 		header('Location: ' . $redirect);
 		exit;
 	}
 	
-	if (isset($_SESSION['access_token]']) && $_SESSION['access_token']) {
-		$client->setAccessToken($_SESSION['access_token']);
+	if (isset($_SESSION['token']) && $_SESSION['token']) {
+		$client->setAccessToken($_SESSION['token']);
 	}
 	
 	if ($client->getAccessToken()) {
@@ -219,17 +206,25 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 	} else {
 		echo 'no access token';
 	}
+	endif;
 ?>
 <?php endif; ?>
 
-<h2>did2 A/B Testing Settings(Old)</h2>
+<h2>did2 A/B Testing Settings(New)</h2>
 
-<?php if( ! get_option( 'did2_ab_testing_access_token') ) : ?>
+<?php /*update_option( 'did2_ab_testing_access_token', "" );*/ ?>
+<?php echo 'token+' . get_option( 'did2_ab_testing_access_token' ) . '+token'; ?>
+<?php if( ! get_option( 'did2_ab_testing_access_token') || get_option( 'did2_ab_testing_access_token' ) == "" ) : ?>
 <h3>Google Auth Settings</h3>
 	<?php
 	require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
+	try {
 	$auth = new AdSenseAuth();
 	$result = $auth->authenticate ( 'default' );
+	} catch (exception $e ) {
+		echo $e;
+		return;
+	}
 	?>
 <?php endif; ?>
 
@@ -238,7 +233,7 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 <?php do_settings_sections( 'did2_ab_testing_options_group' ); ?>
 <?php $options = get_option( 'did2_ab_testing_options' ); ?>
 
-<h3>Google Auth Settings(Old)</h3>
+<h3>Google Auth Settings(Old Old)</h3>
 
 <table class="google-account">
 <tbody id="google-account">
@@ -294,47 +289,68 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 	</td>
 	<td>
 		<?php
-		if(false) {
+		if(isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
+			$channel = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
 			/* AdSense */
-			if( get_option( 'did2_ab_testing_access_token') ){
-			require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
-			$auth = new AdSenseAuth();
-			$result = $auth->authenticate ( 'default' );
-			if ( $result ) {
-				$adSense = $auth->getAdSenseService();
-			}
+			//echo get_option( 'did2_ab_testing_access_token' );
 			
-			$query_adsense = "EARNINGS";
-			$from = date ( 'Y-m-d', time () - 14 * 24 * 60 * 60 );
-			$to = date ( 'Y-m-d', time () - 24 * 60 * 60 );
-			$optParams = array (
-				'metric' => array (
-					$query_adsense 
-				),
-				'dimension' => 'DATE',
-				'sort' => 'DATE',
-				'useTimezoneReporting' => 1//get_option ( 'gads_dash_timezone' ) 
-			);
-			try {
-				$serial = 'gadsdash_qr1' . str_replace ( array (
-					',',
-					'-',
-					date ( 'Y' ) 
-					), "", $from . $to . 1/*get_option ( 'gads_dash_timezone' )*/ . $query_adsense );
-				$transient = get_transient ( $serial );
-				if (empty ( $transient )) {
-					$data = $adSense->reports->generate ( $from, $to, $optParams );
-					set_transient ( $serial, $data, 60/*get_option ( 'gads_dash_cachetime' )*/ );
-					echo 'qqq';
-				} else {
-					$data = $transient;
-				}
-			} catch ( exception $e ) {
-				//if (get_option ( '_token' )) {
-					echo did2_ab_testing_pretty_error ( $e );
-					return;
+			if( get_option( 'did2_ab_testing_access_token' ) ){
+				require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
+				$auth = new AdSenseAuth();
+				$result = $auth->authenticate ( 'default' );
+				//if ( $result ) {
+					$adSense = $auth->getAdSenseService();
 				//}
-			}
+				
+				//$query_adsense = "EARNINGS";
+				$query_adsense = "PAGE_VIEWS_RPM";
+				$from = date ( 'Y-m-d', time () - 14 * 24 * 60 * 60 );
+				$to = date ( 'Y-m-d', time () - 24 * 60 * 60 );
+				$optParams = array (
+					'metric' => array (
+						$query_adsense 
+					),
+					//'dimension' => 'DATE',//'CUSTOM_CHANNEL_ID',
+					//'sort' => 'DATE',//'CUSTOM_CHANNEL_ID',
+					'filter' => array(
+						'CUSTOM_CHANNEL_ID=@' . $channel
+					),
+					'useTimezoneReporting' => '1'//get_option ( 'gads_dash_timezone' ) 
+				);
+				
+				//echo 'before try<br />';
+				
+				try {
+					/*$serial = 'gadsdash_qr1' . str_replace ( array (
+						',',
+						'-',
+						date ( 'Y' ) 
+						), "", $from . $to . 1 . $query_adsense );
+					$transient = get_transient ( $serial );
+					*/ //if (empty ( $transient )) {
+					//echo 'ppp';
+					echo '<!-- ';
+					var_dump ($optParams);
+					echo ' -->';
+					$from = '2015-01-30';
+					$to = '2015-02-04';
+						$data = $adSense->reports->generate ( $from, $to, $optParams );
+					//	set_transient ( $serial, $data, 60/*get_option ( 'gads_dash_cachetime' )*/ );
+					//	echo 'qqq';
+						echo '<!-- ';
+						var_dump( $data );
+						echo ' -->';
+						echo '<b>' . $data['totals'][0] . '</b>';
+					//} else {
+					//	$data = $transient;
+					//}
+				} catch ( exception $e ) {
+					//if (get_option ( '_token' )) {
+						//echo did2_ab_testing_pretty_error ( $e );
+						echo $e;
+						return;
+					//}
+				}
 			} else {
 				echo 'no access token';
 			}

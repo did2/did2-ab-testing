@@ -45,7 +45,7 @@ class AdSenseAuth {
 		//}
 		$this->client = new Google_Client ();
 		$this->client->setAccessType ( 'offline' );
-		$this->client->setApplicationName ( 'did2 AB Testing' );
+		//$this->client->setApplicationName ( 'did2 AB Testing 1' );
 		$this->client->setRedirectUri ( 'urn:ietf:wg:oauth:2.0:oob' );
 		
 		//if (get_option ( 'did2_ab_testing_userapi' )) {
@@ -54,10 +54,9 @@ class AdSenseAuth {
 		//	$this->client->setDeveloperKey ( get_option ( 'did2_ab_testing_apikey' ) );
 		//} else {
 			$this->client->setClientId ( '153026819782-lgu4cg9uepvvi9bj5fhd38v8nq70trr0.apps.googleusercontent.com' );
-			$this->client->setClientSecret ( 'wG4M8LOH5xHjjv1U8-i1L72-' );
-			$this->client->setDeveloperKey ( 'AIzaSyCqDni7TvMUl_xWO7ktvQSacWqBbDbQFAU' );
+			$this->client->setClientSecret ( 'UXIRBK5BiVtrQJDtAg5_vNvB' );
+			//$this->client->setDeveloperKey ( '' );
 		//}
-		
 		$this->adSenseService = new Google_Service_AdSense ( $this->client );
 	}
 	function did2_ab_testing_store_token($user, $token) {
@@ -65,6 +64,7 @@ class AdSenseAuth {
 		update_option ( 'did2_ab_testing_access_token', $token );
 	}
 	function did2_ab_testing_get_token() {
+		//echo 'token+' . get_option( 'did2_ab_testing_access_token' ) . '+token';
 		if ( get_option( 'did2_ab_testing_access_token' ) ) {
 			return get_option( 'did2_ab_testing_access_token' );
 		} else {
@@ -85,6 +85,7 @@ class AdSenseAuth {
 		
 		if (isset ( $token )) {
 			$this->client->setAccessToken ( $token );
+			return $this->client->getAccessToken();
 		} else {
 			$this->client->setScopes ( array (
 					"https://www.googleapis.com/auth/adsense.readonly" 

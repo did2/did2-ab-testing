@@ -51,3 +51,68 @@ pre.diff del, .did2_ace_del-line {
 div#editor {
 	height: 500px;
 }
+
+.theme_list th {
+	padding: 3px 15px;
+	
+	text-align: right;
+	
+	background-color: #FFFFFF;
+	}
+	
+.theme_list th.theme_name {
+	text-align: left;
+	}
+
+.theme_list .theme .theme_name {
+	text-align: left;
+	}
+
+.theme_list .theme td {
+	padding: 0px 15px;
+
+	text-align: right;
+	}
+
+.theme_list .theme td.ratio {
+	width: auto;
+	}
+
+.theme_list .theme td.ratio input {
+	width: 60px;
+	text-align: right;
+	}
+
+.theme_list .theme td.custom_channel_id {
+	width: auto;
+	
+	text-align: center;
+	}
+
+.theme_list .theme td.custom_channel_id input {
+	width: auto;
+	text-align: left;
+	}
+
+.theme_list .theme span.val {
+	display: inline-block;
+	
+	width: auto;
+	
+	text-align: right;
+	}
+
+.theme_list .theme div.max {
+	display: inline-block;
+	
+	width: 100px;
+	
+	margin-left: 10px;
+	}
+
+.theme_list .theme div.max span.bar {
+	display: block;
+	
+	background-color: #00A29B;
+	color: #FFFFFF;
+	}

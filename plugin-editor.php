@@ -7,8 +7,8 @@ if ( is_admin() ) {
 }
 
 function did2_ab_testing_admin_menu_hook_plugin_editor() {
-	add_management_page('Plugin Editor - Did2 AB Testing', 'Plugin Editor', 'edit_plugins', 'did2_ab_testing_plugin_editor', 'did2_ab_testing_create_plugin_editor_page');
-	
+	$handle = add_management_page('Plugin Editor - Did2 AB Testing', 'Plugin Editor', 'edit_plugins', 'did2_ab_testing_plugin_editor', 'did2_ab_testing_create_plugin_editor_page');
+	add_action('admin_print_styles-' . $handle, 'did2_ab_testing_enqueue_scripts');
 	add_action('admin_print_scripts', 'did2_ab_testing_plugin_editor_js');
 }
 

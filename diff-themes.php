@@ -1,7 +1,8 @@
 <?php
 
 function did2_ab_testing_admin_menu_hook_diff_themes() {
-	add_management_page('Diff themes - Did2 AB Testing', 'Diff Themes', 'edit_themes', __FILE__, 'did2_ab_testing_create_diff_themes_page');
+	$handle = add_management_page('Diff themes - Did2 AB Testing', 'Diff Themes', 'edit_themes', __FILE__, 'did2_ab_testing_create_diff_themes_page');
+	add_action('admin_print_styles-' . $handle, 'did2_ab_testing_enqueue_scripts');
 }
 
 function did2_ab_testing_create_diff_themes_page() {

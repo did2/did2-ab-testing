@@ -105,9 +105,10 @@ class AdSenseAuth {
 					</div>';
 				return;
 			} else if (isset ( $_REQUEST ['did2_ab_testing_access_token'] )) {
-				echo 'bbb';
+				echo 'Loading your access token.<br />';
 				$this->client->authenticate ( $_REQUEST ['did2_ab_testing_access_token'] );
 				$this->did2_ab_testing_store_token ( $this->user, $this->client->getAccessToken () );
+				echo 'If you want to reset the stored access token, Reload this page. Then, a reset button will be shown here.';
 			} else {
 				$adminurl = admin_url ( "#did2_ab_testing-widget" );
 				echo '<script> window.location="' . $adminurl . '"; </script> ';

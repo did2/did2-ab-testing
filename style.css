@@ -1,6 +1,11 @@
 h2 {
 	font-weight: 600;
 	}
+	
+h3 {
+	margin-top: 60px;
+	border-bottom: solid 1px #000000;
+	}
 
 table.filelist thead {
 	font-weight: bold;
@@ -52,23 +57,32 @@ div#editor {
 	height: 500px;
 }
 
-.theme_list th {
+.theme_list tr {
+	background-color: #FFFFFF;
+}
+
+.theme_list tr th {
 	padding: 3px 15px;
 	
-	text-align: right;
+	text-align: left;
 	
-	background-color: #FFFFFF;
+	background-color: #E1EFD6;
+	/*color: #00A29B;*/
+	}
+	
+.theme_list tr.group th {
+	text-align: left;
 	}
 	
 .theme_list th.theme_name {
 	text-align: left;
 	}
 
-.theme_list .theme .theme_name {
+.theme_list .theme_name {
 	text-align: left;
 	}
 
-.theme_list .theme td {
+.theme_list td {
 	padding: 0px 15px;
 
 	text-align: right;
@@ -115,4 +129,18 @@ div#editor {
 	
 	background-color: #00A29B;
 	color: #FFFFFF;
+	}
+	
+.theme_list .tools {
+	display: none;
+	
+	background-color: transparent;
+	}
+	
+.theme_list .tools .theme_name {
+	background-color: #FFFFFF;
+	}
+	
+.theme_list .tools .tool_buttons {
+	text-align: left;
 	}

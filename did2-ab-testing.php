@@ -457,8 +457,10 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 	
 	<tr class="theme">
 		<td>
+			<input type="button" value="Edit" class="button" onclick="window.open('<?php echo admin_url('tools.php?page=did2_ab_testing_theme_editor&theme=' . $theme_dir_name); ?>');" />
 			<input type="button" value="Copy" class="button" onclick="jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
 			<input type="button" value="Delete" class="button" onclick="jQuery('#delete_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
+			<input type="button" value="Diff" class="button" onclick="jQuery('#diff_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
 		</td>
 		<td class="theme_name"><?php echo $theme->get( 'Name' ); ?></td>
 		<td class="theme_name"><?php echo $theme_dir_name; ?></td>

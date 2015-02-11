@@ -6,7 +6,8 @@ if ( is_admin() ) {
 }
 
 function did2_ab_testing_admin_menu_hook_theme_editor() {
-	add_management_page('Theme Editor - Did2 AB Testing', 'Theme Editor', 'edit_themes', 'did2_ab_testing_theme_editor', 'did2_ab_testing_create_theme_editor_page');
+	$handle = add_management_page('Theme Editor - Did2 AB Testing', 'Theme Editor', 'edit_themes', 'did2_ab_testing_theme_editor', 'did2_ab_testing_create_theme_editor_page');
+	add_action('admin_print_styles-' . $handle, 'did2_ab_testing_enqueue_scripts');
 }
 
 function did2_ab_testing_create_theme_editor_page() {
@@ -229,7 +230,7 @@ function did2_ab_testing_create_theme_editor_editor() {
 		<?php else : ?>
 			editor.getSession().setMode('ace/mode/php');
 		<?php endif; ?>
-		editor.getSession().useSoftTabs(false);
+		editor.getSession().setUseSoftTabs(false);
 		//jQuery('div#editor').height = 500;
 
 		jQuery('form#template input#submit').on('click', function() {

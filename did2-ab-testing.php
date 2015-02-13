@@ -149,6 +149,12 @@ function did2_ab_testing_process_post() {
 		exit;
 	}
 	
+	if ( isset ( $_POST ['Delete'] ) && check_admin_referer( 'did2_ab_testing_delete', 'did2_ab_testing_nonce' )) {
+		delete_theme( $_POST ['theme_dir'] );
+		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&deleted=true') );
+		exit;
+	}
+	
 	if ( isset ( $_POST ['ResetAuth']) && check_admin_referer( 'did2_ab_testing_reset_auth', 'did2_ab_testing_nonce' )) {
 		update_option( 'did2_ab_testing_access_token', "" );
 		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&reset_auth=true') );
@@ -453,7 +459,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 ?>
 
 <?php foreach( $themes as $theme_dir_name => $theme ) : ?>
-	<?php $theme_dir_name_esc = str_replace( array( '.' ), array( '___' ), $theme_dir_name ); ?>
+	<?php $theme_dir_name_esc = str_replace( array( '.', '-' ), array( '_dot_', '_minus_' ), $theme_dir_name ); ?>
 	
 	<tr class="theme">
 		<td>
@@ -503,8 +509,25 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		</td>
 		<?php endif; ?>
 	</tr>
-	
 	<tr id="duplicate_theme_<?php echo $theme_dir_name_esc; ?>" class="tools duplicate_theme">
+		<script type="text/javascript">
+		<!--
+			function did2_ab_testing_duplicate_template_form_<?php echo $theme_dir_name_esc; ?>() {
+				var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+				jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?> input').each(function(){
+					var input = jQuery(this);
+					form.append(jQuery('<input />', {type: input.attr('type'), name: input.attr('name'), value: input.attr('value')}));
+				});
+				form.append(jQuery('<?php echo wp_nonce_field('did2_ab_testing_duplicate', 'did2_ab_testing_nonce', false, false); ?>'));
+				form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+				form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'duplicate'}));
+				form.append(jQuery('<input />', {type: 'hidden', name: 'copy_from', value: '<?php echo $theme_dir_name; ?>'}));
+				form.append(jQuery('<input />', {type: 'hidden', name: 'Duplicate', value: 'Duplicate'}));
+				form.submit();
+				return false;
+			}
+		// -->
+		</script>
 		<?php
 			$timestamp = date( 'Y-m-d-H-i', current_time('timestamp', 0) );
 			$new_theme_name = preg_replace('/20[0-9][0-9]-[0-1][0-9]-[0-3][0-9]-[0-2][0-9]-[0-5][0-9]/', $timestamp, $theme->get('Name'));
@@ -516,10 +539,6 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				$new_theme_dir_name .= '_' . $timestamp;
 			}
 		?>
-		<form name="did_ab_testing_duplicate_template_form_<?php echo $theme_dir_name_esc; ?>" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
-		<?php wp_nonce_field('did2_ab_testing_duplicate', 'did2_ab_testing_nonce'); ?>
-		<input type="hidden" name="action" value="duplicate" />
-		<input type="hidden" name="copy_from" value="<?php echo $theme_dir_name; ?>" />
 		<td></td>
 		<td class="theme_name">
 			New Template Name:<br />
@@ -531,20 +550,19 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		</td>
 		<?php if( $can_use_api ) : ?>
 			<td colspan="4" class="tool_buttons">
-				<input type="submit" name="Duplicate" value="New" class="button button-primary" />
+				<input type="submit" name="Duplicate" value="New" class="button button-primary" onclick="did2_ab_testing_duplicate_template_form_<?php echo $theme_dir_name_esc; ?>(); return false;" />
 				<input type="button" name="cancel-copy-<?php echo $theme_dir_name_esc; ?>" value="Cancel" class="button"
 					onclick="jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?>').hide();"
 				/>
 			</td>
 		<?php else: ?>
 			<td colspan="1" class="tool_buttons">
-				<input type="submit" name="copy-<?php echo $theme_dir_name_esc; ?>" value="New" class="button button-primary" />
+				<input type="submit" name="copy-<?php echo $theme_dir_name_esc; ?>" value="New" class="button button-primary" onsubmit="did2_ab_testing_duplicate_template_form_<?php echo $theme_dir_name_esc; ?>(); return false;" />
 				<input type="button" name="cancel-copy-<?php echo $theme_dir_name_esc; ?>" value="Cancel" class="button"
 					onclick="jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?>').hide();"
 				/>
 			</td>
 		<?php endif; ?>
-		</form>
 	</tr>
 <?php endforeach; ?>
 

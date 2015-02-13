@@ -136,6 +136,64 @@ function duplicate_theme( $from_theme_dir_name, $to_theme_dir_name = '', $to_the
 	}
 }
 
+function delete_theme_0( $theme_dir_name) {
+	global $wp_filesystem;
+	
+	$theme = wp_get_theme( $theme_dir_name );
+	if ( ! $theme->exists() )
+		wp_die( 'Theme to be Deleted:' . $theme_dir_name . ' does not exist.' );
+
+	$redirect = wp_nonce_url( 'options-general.php?page=did2_ab_testing_options', '', false, false, array( 'theme_dir' ) );
+	if ( false === ($credentials = request_filesystem_credentials($redirect)) ) {
+		$data = ob_get_contents();
+		ob_end_clean();
+		if ( ! empty($data) ){
+			include_once( ABSPATH . 'wp-admin/admin-header.php');
+			echo $data;
+			include( ABSPATH . 'wp-admin/admin-footer.php');
+			exit;
+		}
+		return;
+	}
+
+	if ( ! WP_Filesystem($credentials) ) {
+		request_filesystem_credentials($redirect, '', true); // Failed to connect, Error and request again
+		$data = ob_get_contents();
+		ob_end_clean();
+		if ( ! empty($data) ) {
+			include_once( ABSPATH . 'wp-admin/admin-header.php');
+			echo $data;
+			include( ABSPATH . 'wp-admin/admin-footer.php');
+			exit;
+		}
+		return;
+	}
+
+	if ( ! is_object($wp_filesystem) )
+		return new WP_Error('fs_unavailable', __('Could not access filesystem.'));
+
+	if ( is_wp_error($wp_filesystem->errors) && $wp_filesystem->errors->get_error_code() )
+		return new WP_Error('fs_error', __('Filesystem error.'), $wp_filesystem->errors);
+
+	$themes_dir = $wp_filesystem->wp_themes_dir();
+	if ( empty( $themes_dir ) ) {
+		return new WP_Error( 'fs_no_themes_dir', __( 'Unable to locate WordPress theme directory.' ) );
+	}
+
+	$themes_dir = trailingslashit( $themes_dir );
+	$theme_dir_path = trailingslashit($themes_dir . $theme_dir_name);
+	
+	$active = wp_get_theme()->get_stylesheet();
+	
+	if ( $active == $theme_dir_name ) {
+		return false;
+	}
+	
+	$wp_filesystem->delete( $theme_dir_path, true );
+	
+	return true;
+}
+
 add_action('admin_init', 'did2_ab_testing_process_post');
 //add_action('admin_post_duplicate', 'did2_ab_testing_process_post');
 function did2_ab_testing_process_post() {
@@ -150,8 +208,13 @@ function did2_ab_testing_process_post() {
 	}
 	
 	if ( isset ( $_POST ['Delete'] ) && check_admin_referer( 'did2_ab_testing_delete', 'did2_ab_testing_nonce' )) {
-		delete_theme( $_POST ['theme_dir'] );
-		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&deleted=true') );
+		$_POST ['theme_dir'];
+		$result = delete_theme_0( $_POST ['theme_dir'] );
+		if($result) {
+			wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&deleted=true') );
+		} else {
+			wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&deleted=current') );
+		}
 		exit;
 	}
 	
@@ -207,6 +270,20 @@ if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 	?>
 	<div class="updated">
 		<p>Duplication Complete.</p>
+	</div>
+	<?php
+}
+
+if ( isset($_GET['deleted']) && $_GET['deleted'] == 'true') {
+	?>
+	<div class="updated">
+		<p>Deletion Complate.</p>
+	</div>
+	<?php
+} else if ( isset($_GET['deleted']) && $_GET['deleted'] == 'current' ) {
+	?>
+	<div class="updated">
+		<p>Could Not be Deleted.</p>
 	</div>
 	<?php
 }
@@ -466,7 +543,53 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			<input type="button" value="Edit" class="button" onclick="window.open('<?php echo admin_url('tools.php?page=did2_ab_testing_theme_editor&theme=' . $theme_dir_name); ?>');" />
 			<input type="button" value="Copy" class="button" onclick="jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
 			<input type="button" value="Delete" class="button" onclick="jQuery('#delete_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
-			<input type="button" value="Diff" class="button" onclick="jQuery('#diff_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
+			
+			<!-- diff -->
+			<script type="text/javascript">
+			<!--
+
+			// -->
+			</script>
+			<input type="button" value="Diff" class="button button_diff button_diff_a" id="button_diff_a_<?php echo $theme_dir_name_esc; ?>" onclick="
+				if(jQuery(this).hasClass('diff_a_selected')) {
+					jQuery(this).removeClass('diff_a_selected');
+					jQuery('.button_diff_a').attr('disabled', false);
+					jQuery('.button_diff_a').attr('value', 'Diff');
+					jQuery('.button_diff_b').hide();
+					jQuery('.button_diff_cancel').hide();
+				} else {
+					jQuery(this).addClass('diff_a_selected');
+					jQuery('#button_diff_cancel_<?php echo $theme_dir_name_esc; ?>').fadeIn();
+					jQuery('.button_diff_b_<?php echo $theme_dir_name_esc; ?>').fadeIn();
+					jQuery('.button_diff_a').attr('value', 'Diff(A)');
+					jQuery('.button_diff_a').not('#button_diff_a_<?php echo $theme_dir_name_esc; ?>').attr('disabled', true);
+				}" />
+			<?php foreach( $themes as $theme_dir_name_diff => $theme_diff ) : ?>
+				<?php $theme_dir_name_diff_esc = str_replace( array( '.', '-' ), array( '_dot_', '_minus_' ), $theme_dir_name_diff ); ?>
+				<?php if ( $theme_dir_name_diff == $theme_dir_name ) : ?>
+					<input type="button" value="Cancel" class="button button_diff_cancel" id="button_diff_cancel_<?php echo $theme_dir_name_esc; ?>" style="display: none;"
+						onclick="
+							jQuery('#button_diff_a_<?php echo $theme_dir_name_esc; ?>').removeClass('diff_a_selected');
+							jQuery('.button_diff_a').attr('disabled', false);
+							jQuery('.button_diff_a').attr('value', 'Diff');
+							jQuery('.button_diff_b').hide();
+							jQuery('.button_diff_cancel').hide();
+						"
+					/>
+				<?php else : ?>
+					<input type="button" value="Diff(B)" class="button button_diff button_diff_b button_diff_b_<?php echo $theme_dir_name_diff_esc; ?>" style="display: none;"
+						onclick="
+							var form = jQuery('<form/>', {method: 'get', action: 'tools.php'});
+							form.append(jQuery('<input />', {type: 'hidden', name: 'page', value: 'did2-ab-testing/diff-themes.php'}));
+							form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'diff'}));
+							form.append(jQuery('<input />', {type: 'hidden', name: 'theme_a', value: '<?php echo $theme_dir_name; ?>'}));
+							form.append(jQuery('<input />', {type: 'hidden', name: 'theme_b', value: '<?php echo $theme_dir_name_diff; ?>'}));
+							form.submit();
+							return false;
+						"
+					/>
+				<?php endif; ?>
+			<?php endforeach; ?>
 		</td>
 		<td class="theme_name"><?php echo $theme->get( 'Name' ); ?></td>
 		<td class="theme_name"><?php echo $theme_dir_name; ?></td>
@@ -509,6 +632,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		</td>
 		<?php endif; ?>
 	</tr>
+	
 	<tr id="duplicate_theme_<?php echo $theme_dir_name_esc; ?>" class="tools duplicate_theme">
 		<script type="text/javascript">
 		<!--
@@ -560,6 +684,42 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				<input type="submit" name="copy-<?php echo $theme_dir_name_esc; ?>" value="New" class="button button-primary" onsubmit="did2_ab_testing_duplicate_template_form_<?php echo $theme_dir_name_esc; ?>(); return false;" />
 				<input type="button" name="cancel-copy-<?php echo $theme_dir_name_esc; ?>" value="Cancel" class="button"
 					onclick="jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?>').hide();"
+				/>
+			</td>
+		<?php endif; ?>
+	</tr>
+	
+	<tr id="delete_theme_<?php echo $theme_dir_name_esc; ?>" class="tools delete_theme">
+		<script type="text/javascript">
+		<!--
+			function did2_ab_testing_delete_template_form_<?php echo $theme_dir_name_esc; ?>() {
+				var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+				form.append(jQuery('<?php echo wp_nonce_field('did2_ab_testing_delete', 'did2_ab_testing_nonce', false, false); ?>'));
+				form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+				form.append(jQuery('<input />', {type: 'hidden', name: 'theme_dir', value: '<?php echo $theme_dir_name; ?>'}));
+				form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'delete'}));
+				form.append(jQuery('<input />', {type: 'hidden', name: 'Delete', value: 'Delete'}));
+				form.submit();
+				return false;
+			}
+		// -->
+		</script>
+		<td></td>
+		<td colspan="2" class="message">
+			Are you sure you want to delete '<?php echo $theme_dir_name; ?>' directory?
+		</td>
+		<?php if( $can_use_api ) : ?>
+			<td colspan="4" class="tool_buttons">
+				<input type="submit" name="Delete" value="Delete" class="button button-primary" onclick="did2_ab_testing_delete_template_form_<?php echo $theme_dir_name_esc; ?>(); return false;" />
+				<input type="button" name="cancel-delete-<?php echo $theme_dir_name_esc; ?>" value="Cancel" class="button"
+					onclick="jQuery('#delete_theme_<?php echo $theme_dir_name_esc; ?>').hide();"
+				/>
+			</td>
+		<?php else: ?>
+			<td colspan="1" class="tool_buttons">
+				<input type="submit" name="Delete" value="Delete" class="button button-primary" onsubmit="did2_ab_testing_delete_template_form_<?php echo $theme_dir_name_esc; ?>(); return false;" />
+				<input type="button" name="cancel-delete-<?php echo $theme_dir_name_esc; ?>" value="Cancel" class="button"
+					onclick="jQuery('#delete_theme_<?php echo $theme_dir_name_esc; ?>').hide();"
 				/>
 			</td>
 		<?php endif; ?>
@@ -647,7 +807,7 @@ https://support.google.com/adsense/answer/1354736?hl=en
 
 <form name="did_ab_testing_diff_template_form" method="get" action="tools.php">
 	<input type="hidden" name="page" value="did2-ab-testing/diff-themes.php">
-	<input type="hidden" name="actioon" value="diff">
+	<input type="hidden" name="action" value="diff">
 			<select name="theme_a">
 				<?php
 				$themes = wp_get_themes();

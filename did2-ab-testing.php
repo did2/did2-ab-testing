@@ -30,6 +30,8 @@ if( is_admin() ) {
 add_action( 'setup_theme' , 'did2_ab_testing_setup_theme' );
 add_action( 'plugins_loaded' , 'did2_ab_testing_plugins_loaded' );
 
+add_action( 'template_redirect', 'did2_ab_testing_start_buffering', 1);
+
 function did2_ab_testing_plugins_loaded() {
     add_filter( 'template' , 'did2_ab_testing_template_filter' );
     add_filter( 'stylesheet' , 'did2_ab_testing_stylesheet_filter' );
@@ -911,6 +913,26 @@ function did2_ab_testing_stylesheet_filter( $stylesheet ) {
 		return $s;
 	}
 	return $stylesheet;
+}
+
+function did2_ab_testing_start_buffering() {
+	ob_start('did2_ab_testing_end_buffering');
+}
+
+function did2_ab_testing_end_buffering( $content ) {
+	if ( stripos($content,"<html") === false || stripos($content,"<xsl:stylesheet") !== false ) { return $content;}
+	
+	if ( function_exists ( "did2_ab_testing_adsense_custom_channel_id" ) ) {
+		// for asynchronized code
+		$content = preg_replace(preg_quote('/(adsbygoogle = window.adsbygoogle || []).push({})/'),
+		'(adsbygoogle = window.adsbygoogle || []).push({ params: { google_ad_channel:"' . did2_ab_testing_adsense_custom_channel_id() . '"}})', $content);
+		
+		// for synchronized ad code
+		$content = preg_replace(preg_quote('/google_ad_height = /'),
+		'google_ad_channel = "' . did2_ab_testing_adsense_custom_channel_id() . '"; google_ad_height = ', $content);
+	}
+	
+	return $content;
 }
 
 // ------------------------------------------------------------

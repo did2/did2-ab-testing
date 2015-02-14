@@ -212,13 +212,14 @@ function did2_ab_testing_create_theme_editor_editor() {
 	<br class="clear" />
 	<script type="text/javascript">
 	/* <![CDATA[ */
-		jQuery(document).ready(function($){
-			$('#template').submit(
-				function(){ $('#scrollto').val( $('#newcontent').scrollTop() ); }
-			);
-			$('#newcontent').scrollTop( $('#scrollto').val() );
-		});
+		//jQuery(document).ready(function($){
+		//	$('#template').submit(
+		//		function(){ $('#scrollto').val( $('#newcontent').scrollTop() ); }
+		//	);
+		//	$('#newcontent').scrollTop( $('#scrollto').val() );
+		//});
 		var textarea = jQuery('textarea#newcontent');
+		var scrollto = jQuery('input#scrollto');
 		textarea.hide();
 		var editor = ace.edit('editor');
 		//editor.getSession().setUseWorker(false);
@@ -231,10 +232,12 @@ function did2_ab_testing_create_theme_editor_editor() {
 			editor.getSession().setMode('ace/mode/php');
 		<?php endif; ?>
 		editor.getSession().setUseSoftTabs(false);
+		editor.getSession().setScrollTop( <?php echo $scrollto; ?> );
 		//jQuery('div#editor').height = 500;
 
 		jQuery('form#template input#submit').on('click', function() {
 			textarea.val(editor.getSession().getValue());
+			scrollto.val(editor.getSession().getScrollTop());
 		});
 	/* ]]> */
 	</script>

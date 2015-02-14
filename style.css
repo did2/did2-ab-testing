@@ -157,6 +157,10 @@ div#editor {
 .theme_list .tools .message {
 	background-color: #FFFFFF;
 	}
+
+.theme_list .tools .memo {
+	background-color: #FFFFFF;
+	}
 	
 .theme_list #google_auth {
 	text-align: left;

@@ -202,6 +202,12 @@ function did2_ab_testing_process_post() {
 	// ------------------------------------------------------------
 	// POST
 	// ------------------------------------------------------------
+	if ( isset ( $_POST ['SaveMemo'] ) && check_admin_referer( 'did2_ab_testing_save_memo', 'did2_ab_testing_nonce' )) {
+		update_option( 'did2_ab_testing_memo_theme_' . $_POST[ 'theme' ], $_POST[ 'memo' ]);
+		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&memo_saved=true') );
+		exit;
+	}
+	
 	if ( isset ( $_POST ['Duplicate'] ) && check_admin_referer( 'did2_ab_testing_duplicate', 'did2_ab_testing_nonce' )) {
 		//echo $_POST ['copy_from'] . ', ' . $_POST ['new_dir_name'] . ', ' . $_POST ['new_name'];
 		duplicate_theme( $_POST ['copy_from'], $_POST ['new_dir_name'], $_POST ['new_name'] );
@@ -274,6 +280,14 @@ function did2_ab_testing_process_post() {
 // generate options page
 function did2_ab_testing_options_page() {
 session_start();
+
+if ( isset($_GET['memo_saved']) && ! isset($_GET['settings-updated']) ) {
+	?>
+	<div class="updated">
+		<p>Memo is Saved.</p>
+	</div>
+	<?php
+}
 
 if ( isset($_GET['duplicated']) && ! isset($_GET['settings-updated']) ) {
 	?>
@@ -477,6 +491,8 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<td class="tool_buttons">
 			
 			<input type="button" value="Edit" class="button" onclick="window.open('<?php echo admin_url('tools.php?page=did2_ab_testing_theme_editor&theme=' . $theme_dir_name); ?>');" />
+			
+			<input type="button" value="Memo" class="button" onclick="jQuery('#memo_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
 			
 			<input type="button" value="Copy" class="button" onclick="jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
 			
@@ -729,6 +745,45 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<?php endif; ?>
 	</tr>
 	
+	<tr id="memo_theme_<?php echo $theme_dir_name_esc; ?>" class="tools memo_theme">
+		<td></td>
+		<td colspan="3" class="memo" >
+		<p>
+			<textarea id="did2_ab_testing_memo_textarea_<?php echo $theme_dir_name_esc; ?>" rows="10" cols="80"><?php echo get_option( 'did2_ab_testing_memo_theme_' . $theme_dir_name ); ?></textarea>
+		</p>
+		<p>
+			<input
+				type="submit"
+				name="SaveMemo"
+				value="Save"
+				class="button button-primary"
+				onclick="
+					var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+					form.append(jQuery('<?php echo htmlspecialchars( wp_nonce_field('did2_ab_testing_save_memo', 'did2_ab_testing_nonce', false, false) ); ?>'));
+					form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+					form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'save_memo'}));
+					form.append(jQuery('<input />', {type: 'hidden', name: 'SaveMemo', value: 'SaveMemo'}));
+					form.append(jQuery('<input />', {type: 'hidden', name: 'theme', value: '<?php echo $theme_dir_name; ?>'}));
+					form.append(jQuery('<input />', {
+						type: 'hidden',
+						name: 'memo',
+						value: jQuery('textarea#did2_ab_testing_memo_textarea_<?php echo $theme_dir_name_esc; ?>').val()
+					}));
+					form.submit();
+					return false;
+				"
+			/>
+			<input
+				type="button"
+				name="Cancel"
+				value="Close"
+				class="button"
+				onclick="jQuery('#memo_theme_<?php echo $theme_dir_name_esc; ?>').fadeOut();"
+			/>
+		</p>
+		</td>
+	</tr>
+	
 	<tr id="duplicate_theme_<?php echo $theme_dir_name_esc; ?>" class="tools duplicate_theme">
 		<script type="text/javascript">
 		<!--
@@ -750,11 +805,11 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		</script>
 		<?php
 			$timestamp = date( 'Y-m-d-H-i', current_time('timestamp', 0) );
-			$new_theme_name = preg_replace('/20[0-9][0-9]-[0-1][0-9]-[0-3][0-9]-[0-2][0-9]-[0-5][0-9]/', $timestamp, $theme->get('Name'));
+			$new_theme_name = preg_replace('/20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/', $timestamp, $theme->get('Name'));
 			if ( $new_theme_name == $theme->get('Name') ) {
 				$new_theme_name .= '_' . $timestamp;
 			}
-			$new_theme_dir_name = preg_replace('/20[0-9][0-9]-[0-1][0-9]-[0-3][0-9]-[0-2][0-9]-[0-5][0-9]/', $timestamp, $theme_dir_name);
+			$new_theme_dir_name = preg_replace('/20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/', $timestamp, $theme_dir_name);
 			if ( $new_theme_dir_name == $theme_dir_name ) {
 				$new_theme_dir_name .= '_' . $timestamp;
 			}
@@ -762,11 +817,11 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<td></td>
 		<td class="theme_name">
 			New Template Name:<br />
-			<input type="text" name="new_name" value="<?php echo $theme->get('Name') . '_' . date( 'Y-m-d-H-i', current_time('timestamp', 0) ); ?>" />
+			<input type="text" name="new_name" value="<?php echo $new_theme_name; ?>" />
 		</td>
 		<td class="theme_name">
 			New Theme Directory Name:<br />
-			<input type="text" name="new_dir_name" value="<?php echo $theme_dir_name . '_' . date( 'Y-m-d-H-i', current_time('timestamp', 0) ); ?>" />
+			<input type="text" name="new_dir_name" value="<?php echo $new_theme_dir_name; ?>" />
 		</td>
 		<?php if( $can_use_api ) : ?>
 			<td colspan="4" class="tool_buttons">
@@ -837,7 +892,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				<li>
 					Enter a new custom channel's name in [Name] text box <br />
 					(You may copy and use
-						<input type="text" value="did2_ab_testing_<?php echo $theme_dir_name; ?>" size="40"
+						<input type="text" value="<?php echo $theme_dir_name; ?>" size="40"
 							onclick="this.select(0, this.value.length)"
 						/>
 					for the name).
@@ -864,6 +919,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 </tbody>
 </table>
 
+<input type="hidden" name="did2_ab_testing_options[settings_timestamp]" value="<?php echo date( 'Y-m-d-H-i', current_time('timestamp', 0) ); ?>">
 <?php submit_button(); ?>
 
 <h4>How to use &quot;adsense custom channel id&quot;</h4>
@@ -897,6 +953,11 @@ https://support.google.com/adsense/answer/1354736?hl=en
 
 <h3>Global Settings</h3>
 
+<h3>Debug</h3>
+
+<?php var_dump( $options ); ?>
+<?php var_dump( $_SESSION ); ?>
+
 <?php
 }
 
@@ -907,32 +968,38 @@ function did2_ab_testing_init_session_start() {
 
 // switch themes
 function did2_ab_testing_setup_theme() {
+	$options = get_option( 'did2_ab_testing_options' );
+	
+	if ( $_SESSION[ 'DID2_AB_TESTING_TIMESTAMP' ] != $options['settings_timestamp'] ) {
+		$_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] = NULL;
+		$_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ] = NULL;
+		$_SESSION[ 'DID2_AB_TESTING_TIMESTAMP' ] = $options['settings_timestamp'];
+	}
+	
 	$t = $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ];
 	$s = $_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ];
 	if ($t != NULL || $s != NULL){
 		// do not switch twice at one session.
 	}
-
-	$options = get_option( 'did2_ab_testing_options' );
 	
-	$ratios = array();
+	$sums = array();
 	$themes = wp_get_themes();
 	$sum = 0;
+	
 	foreach( $themes as $theme_dir_name => $theme ) {
-		if ( isset ( $options[ $theme_dir_name ] ) ) {
+		if ( isset ( $options[ $theme_dir_name ] ) && $options[ $theme_dir_name ] > 0) {
 			$ratio = 0 + $options[ $theme_dir_name ] + 0;
+			$sum += $ratio;
+			$sums[ $sum ] = $theme_dir_name;
 		} else {
 			$ratio = 0;
 		}
-		$ratios[ $ratio ] = $theme_dir_name;
-		$sum += $ratio;
 	}
 	if ( $sum != 0 ) {
-		// krsort( $ratios );
+		///krsort( $sums );
 		$rand = mt_rand( 1 , $sum );
-		foreach( $ratios as $ratio => $theme_dir_name ) {
-			$rand -= $ratio;
-			if ( $rand <= 0 ) {
+		foreach( $sums as $s => $theme_dir_name ) {
+			if ( $rand <= $s ) {
 				$_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] = $themes[ $theme_dir_name ][ 'Template' ];
 				$_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ] = $themes[ $theme_dir_name ][ 'Stylesheet' ];
 				break;

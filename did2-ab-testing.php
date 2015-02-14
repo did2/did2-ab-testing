@@ -220,6 +220,12 @@ function did2_ab_testing_process_post() {
 		exit;
 	}
 	
+	if ( isset ( $_POST ['SelectAdminTheme'] ) && check_admin_referer( 'did2_ab_testing_select_admin_theme', 'did2_ab_testing_nonce' )) {
+		update_option( 'did2_ab_testing_theme_dir_name_for_admin', $_POST[ 'admin_theme' ]);
+		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&select_admin_theme=true') );
+		exit;
+	}
+	
 	if ( isset ( $_POST ['ResetAuth']) && check_admin_referer( 'did2_ab_testing_reset_auth', 'did2_ab_testing_nonce' )) {
 		update_option( 'did2_ab_testing_access_token', "" );
 		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&reset_auth=true') );
@@ -468,9 +474,12 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 	<?php $theme_dir_name_esc = str_replace( array( '.', '-' ), array( '_dot_', '_minus_' ), $theme_dir_name ); ?>
 	
 	<tr class="theme">
-		<td>
+		<td class="tool_buttons">
+			
 			<input type="button" value="Edit" class="button" onclick="window.open('<?php echo admin_url('tools.php?page=did2_ab_testing_theme_editor&theme=' . $theme_dir_name); ?>');" />
+			
 			<input type="button" value="Copy" class="button" onclick="jQuery('#duplicate_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
+			
 			<input type="button" value="Delete" class="button" onclick="jQuery('#delete_theme_<?php echo $theme_dir_name_esc; ?>').fadeIn();" />
 			
 			<!-- diff -->
@@ -520,8 +529,44 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				<?php endif; ?>
 			<?php endforeach; ?>
 		</td>
-		<td class="theme_name"><?php echo $theme->get( 'Name' ); ?></td>
-		<td class="theme_name"><?php echo $theme_dir_name; ?></td>
+		<td class="theme_name">
+			<?php if ( $theme_dir_name == get_option( 'did2_ab_testing_theme_dir_name_for_admin' ) ) : ?>
+				<a
+					class="admin_theme"
+					href="#"
+					onclick="
+						var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+						form.append(jQuery('<?php echo htmlspecialchars( wp_nonce_field('did2_ab_testing_select_admin_theme', 'did2_ab_testing_nonce', false, false) ); ?>'));
+						form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+						form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'select_admin_theme'}));
+						form.append(jQuery('<input />', {type: 'hidden', name: 'SelectAdminTheme', value: 'SelectAdminTheme'}));
+						form.append(jQuery('<input />', {type: 'hidden', name: 'admin_theme', value: ''}));
+						form.submit();
+						return false;
+					"
+				>[admin]</a>
+			<?php else : ?>
+				<a
+					class="not_admin_theme"
+					href="#"
+					onclick="
+						var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+						form.append(jQuery('<?php echo htmlspecialchars( wp_nonce_field('did2_ab_testing_select_admin_theme', 'did2_ab_testing_nonce', false, false) ); ?>'));
+						form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+						form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'select_admin_theme'}));
+						form.append(jQuery('<input />', {type: 'hidden', name: 'SelectAdminTheme', value: 'SelectAdminTheme'}));
+						form.append(jQuery('<input />', {type: 'hidden', name: 'admin_theme', value: '<?php echo $theme_dir_name; ?>'}));
+						form.submit();
+						return false;
+					"
+				>[admin]</a>
+			<?php endif; ?>
+			
+			<?php echo $theme->get( 'Name' ); ?>
+		</td>
+		<td class="theme_name">
+			<?php echo $theme_dir_name; ?>
+		</td>
 		<td class="ratio">
 			<input
 				type="text"
@@ -534,6 +579,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				type="text"
 				name="did2_ab_testing_options[adsense_custom_channel_id_<?php echo $theme_dir_name; ?>]"
 				value="<?php echo ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) ? $options[ "adsense_custom_channel_id_" . $theme_dir_name ] : 0 ); ?>"
+				size="10"
 			>
 			<?php if ( $can_use_api ) : ?>
 				<input type="button" name="did2_ab_testing_new_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="Get" class="button"
@@ -777,13 +823,13 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 	
 	<tr id='create_custom_channel_<?php echo $theme_dir_name_esc; ?>' class="tools create_custom_channel">
 		<td></td>
-		<td colspan="4" style="text-align: left;">
+		<td colspan="4" class="message" style="text-align: left;">
 			<p>
-			Unfortunately Google AdSense Management API does not support 'Create New Custom Channel'.<br />
-			You have to create new custom channels manually via your AdSense management screen.
+			Unfortunately Google AdSense Management API does not support any features to create new custom channels.<br />
+			So, you have to visit AdSense page and create new custom channels manually.
 			</p>
 			<p>
-			How to get new 'Custom Channel ID'.
+			Instructions to get a new 'Custom Channel ID':
 			</p>
 			<ol>
 				<li>Visit <a href="https://www.google.com/adsense/app#myads-viewall-channels/product=SELF_SERVICE_CONTENT_ADS" target="_blank">My ads&gt;Content&gt;Custom Channels</a>.</li>
@@ -797,8 +843,13 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 					for the name).
 				</li>
 				<li>Click [Save] button (Do NOT select any units in [Ad units]).</li>
-				<li>Find the row for the new custom channel and Copy its [ID]</li>
-				<li>Come back to this page and Enter the id to [Custom Channel ID] text box in the table.</li>
+				<li>Find the new custom channel from the list and Copy its [ID]</li>
+			</ol>
+			<p>
+			Instructions to register the new 'Custom Channel ID' for a theme:
+			</p>
+			<ol>
+				<li>Come back to this page and Enter the ID to [Custom Channel ID] text box in the table.</li>
 				<li>Click [Save] button.</li>
 			</ol>
 			<p>
@@ -812,6 +863,8 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 
 </tbody>
 </table>
+
+<?php submit_button(); ?>
 
 <h4>How to use &quot;adsense custom channel id&quot;</h4>
 
@@ -840,7 +893,6 @@ google_ad_height = 90;
 <h5>Reference</h5>
 https://support.google.com/adsense/answer/1354736?hl=en
 
-<?php submit_button(); ?>
 </form>
 
 <h3>Global Settings</h3>
@@ -858,11 +910,11 @@ function did2_ab_testing_setup_theme() {
 	$t = $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ];
 	$s = $_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ];
 	if ($t != NULL || $s != NULL){
-		// return TRUE;
+		// do not switch twice at one session.
 	}
 
 	$options = get_option( 'did2_ab_testing_options' );
-
+	
 	$ratios = array();
 	$themes = wp_get_themes();
 	$sum = 0;
@@ -898,6 +950,16 @@ function did2_ab_testing_setup_theme() {
 }
 
 function did2_ab_testing_template_filter( $template ) {
+	//if ( is_user_logged_in() && strlen( get_option( 'did2_ab_testing_theme_dir_name_for_admin' ) ) > 0) {
+	if ( current_user_can('manage_options') && strlen( get_option( 'did2_ab_testing_theme_dir_name_for_admin' ) ) > 0) {
+		$themes = wp_get_themes();
+		foreach( $themes as $theme_dir_name => $theme) {
+			if ( $theme_dir_name == get_option( 'did2_ab_testing_theme_dir_name_for_admin' ) ) {
+				return $themes[ $theme_dir_name ][ 'Template' ];
+			}
+		}
+	}
+	
 	$t = $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ];
 	$s = $_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ];
 	if ($t != NULL && $s != NULL){
@@ -907,6 +969,15 @@ function did2_ab_testing_template_filter( $template ) {
 }
 
 function did2_ab_testing_stylesheet_filter( $stylesheet ) {
+	if ( current_user_can('manage_options') && strlen( get_option( 'did2_ab_testing_theme_dir_name_for_admin' ) ) > 0) {
+		$themes = wp_get_themes();
+		foreach( $themes as $theme_dir_name => $theme) {
+			if ( $theme_dir_name == get_option( 'did2_ab_testing_theme_dir_name_for_admin' ) ) {
+				return $themes[ $theme_dir_name ][ 'Stylesheet' ];
+			}
+		}
+	}
+	
 	$t = $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ];
 	$s = $_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ];
 	if ($t != NULL && $s != NULL){

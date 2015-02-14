@@ -57,6 +57,11 @@ div#editor {
 	height: 500px;
 }
 
+
+
+
+
+
 .theme_list tr {
 	background-color: #FFFFFF;
 }
@@ -76,6 +81,10 @@ div#editor {
 	
 .theme_list th.theme_name {
 	text-align: left;
+	}
+	
+.theme_list tr.theme {
+
 	}
 
 .theme_list .theme_name {
@@ -145,6 +154,38 @@ div#editor {
 	text-align: left;
 	}
 	
+.theme_list .tools .message {
+	background-color: #FFFFFF;
+	}
+	
 .theme_list #google_auth {
 	text-align: left;
+	}
+	
+.theme_list a {
+	text-decoration: none;
+}
+	
+.theme_list a.admin_theme {
+	color: #a00;
+	}
+	
+.theme_list a.not_admin_theme {
+	color: transparent;
+	}
+
+.theme_list tr.theme:hover a.not_admin_theme {
+	color: #0074a2;
+	}
+
+.theme_list .tool_buttons input.admin_theme[type=button] {
+	color: #a00;
+	}
+
+.theme_list .tool_buttons input.not_admin_theme[type=button] {
+	color: #555;
+	}
+	
+.theme_list .tool_buttons input[type=button] {
+	color: #0074a2;
 	}

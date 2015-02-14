@@ -534,11 +534,11 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				value="<?php echo ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) ? $options[ "adsense_custom_channel_id_" . $theme_dir_name ] : 0 ); ?>"
 			>
 			<?php if ( $can_use_api ) : ?>
-				<input type="button" name="did2_ab_testing_new_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="New" class="button"
-					onclick=""
+				<input type="button" name="did2_ab_testing_new_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="Get" class="button"
+					onclick="jQuery('#create_custom_channel_<?php echo $theme_dir_name_esc; ?>').fadeIn();"
 				/>
 			<?php else : ?>
-				<input type="button" name="did2_ab_testing_new_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="New" class="button"
+				<input type="button" name="did2_ab_testing_new_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="Get" class="button"
 					onclick='window.open("https://www.google.com/adsense/app#myads-viewall-channels/product=SELF_SERVICE_CONTENT_ADS")'
 				/>
 			<?php endif; ?>
@@ -772,6 +772,40 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			</td>
 		<?php endif; ?>
 	</tr>
+	
+	<tr id='create_custom_channel_<?php echo $theme_dir_name_esc; ?>' class="tools create_custom_channel">
+		<td></td>
+		<td colspan="4" style="text-align: left;">
+			<p>
+			Unfortunately Google AdSense Management API does not support 'Create New Custom Channel'.<br />
+			You have to create new custom channels manually via your AdSense management screen.
+			</p>
+			<p>
+			How to get new 'Custom Channel ID'.
+			</p>
+			<ol>
+				<li>Visit <a href="https://www.google.com/adsense/app#myads-viewall-channels/product=SELF_SERVICE_CONTENT_ADS" target="_blank">My ads&gt;Content&gt;Custom Channels</a>.</li>
+				<li>Click [New custom channel] button.</li>
+				<li>
+					Enter a new custom channel's name in [Name] text box <br />
+					(You may copy and use
+						<input type="text" value="did2_ab_testing_<?php echo $theme_dir_name; ?>" size="40"
+							onclick="this.select(0, this.value.length)"
+						/>
+					for the name).
+				</li>
+				<li>Click [Save] button (Do NOT select any units in [Ad units]).</li>
+				<li>Find the row for the new custom channel and Copy its [ID]</li>
+				<li>Come back to this page and Enter the id to [Custom Channel ID] text box in the table.</li>
+				<li>Click [Save] button.</li>
+			</ol>
+			<p>
+			<input type="button" name="cancel_create_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="Close" class="button"
+				onclick="jQuery('#create_custom_channel_<?php echo $theme_dir_name_esc; ?>').hide();"
+			/>
+			</p>
+		</td>
+	</tr>
 <?php endforeach; ?>
 
 </tbody>
@@ -806,6 +840,8 @@ https://support.google.com/adsense/answer/1354736?hl=en
 
 <?php submit_button(); ?>
 </form>
+
+<h3>Global Settings</h3>
 
 <?php
 }

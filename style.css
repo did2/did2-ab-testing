@@ -144,3 +144,7 @@ div#editor {
 .theme_list .tools .tool_buttons {
 	text-align: left;
 	}
+	
+.theme_list #google_auth {
+	text-align: left;
+	}

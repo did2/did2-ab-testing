@@ -231,7 +231,7 @@ function did2_ab_testing_process_post() {
 		exit;
 	}
 	
-	if ( isset ( $_REQUEST ['did2_ab_testing_access_token'] )) {
+	if ( isset ( $_POST ['SaveAccessToken'] ) && check_admin_referer( 'did2_ab_testing_save_access_token', 'did2_ab_testing_nonce' )) {
 		try {
 		set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
 		require_once 'Google/Client.php';
@@ -246,7 +246,8 @@ function did2_ab_testing_process_post() {
 		$adsense = new Google_Service_AdSense ( $client );
 		
 		$client->setScopes ( array (
-			"https://www.googleapis.com/auth/adsense.readonly"
+			//"https://www.googleapis.com/auth/adsense.readonly"
+			"https://www.googleapis.com/auth/adsense"
 		));
 		
 		$client->authenticate ( $_REQUEST ['did2_ab_testing_access_token'] );
@@ -318,104 +319,6 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 <h2>did2 A/B Testing Settings</h2>
 <hr />
 
-<?php /*update_option( 'did2_ab_testing_access_token', "" );*/ ?>
-<h3>Google Auth Settings</h3>
-	
-<?php if( ! get_option( 'did2_ab_testing_access_token') || get_option( 'did2_ab_testing_access_token' ) == "" ) : ?>
-	<ol>
-		<li>Access to the <a href="https://console.developers.google.com/" target="_blank" title="google developers console">google developers console</a> and create new project.</li>
-		<li>Generate Client ID and Client Secret for native applications.</li>
-		<li>Save them via the following form.</li>
-	</ol>
-	<form name="did2_ab_testing_save_oauth_settings_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
-		<?php wp_nonce_field('did2_ab_testing_save_oauth_settings', 'did2_ab_testing_nonce'); ?>
-		<input type="hidden" name="action" value="save_oauth_settings">
-		<table class="">
-			<tbody id="">
-				<tr valign="center">
-					<th scope="row" style="text-align: left;">Client ID</th>
-					<td>
-						<input type="text" name="did2_ab_testing_oauth_client_id" value="<?php echo get_option( 'did2_ab_testing_oauth_client_id' ); ?>" size="35" />
-					</td>
-				</tr>
-				<tr valign="center">
-					<th scope="row" style="text-align: left;">Client Secret</th>
-					<td>
-						<input type="text" name="did2_ab_testing_oauth_client_secret" value="<?php echo get_option( 'did2_ab_testing_oauth_client_secret' ); ?>" size="35" />
-					</td>
-				</tr>
-			</tbody>
-		</table>
-		<?php if( get_option( 'did2_ab_testing_oauth_client_id' ) && get_option( 'did2_ab_testing_oauth_client_secret' )) : ?>
-			<input
-				type="submit"
-				name="SaveOAuthSettings"
-				class="button button-primary"
-				value="Save Client ID and Client Secret"
-			>
-		<?php else : ?>
-			<input
-				type="submit"
-				name="SaveOAuthSettings"
-				class="button"
-				value="Save Client ID and Client Secret"
-			>
-		<?php endif; ?>
-	</form>
-	
-	<?php if( get_option( 'did2_ab_testing_oauth_client_id' ) && get_option( 'did2_ab_testing_oauth_client_secret' )) : ?>
-		<?php
-		try {
-			set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
-			require_once 'Google/Client.php';
-			require_once 'Google/Service/AdSense.php';
-			
-			$client = new Google_Client();
-			$client->setAccessType ( 'offline' );
-			$client->setRedirectUri ( 'urn:ietf:wg:oauth:2.0:oob' );
-			
-			$client->setClientId ( get_option( 'did2_ab_testing_oauth_client_id' ) );
-			$client->setClientSecret ( get_option( 'did2_ab_testing_oauth_client_secret' ) );
-			
-			$adsense = new Google_Service_AdSense ( $client );
-			
-			$client->setScopes ( array (
-				"https://www.googleapis.com/auth/adsense.readonly"
-			));
-			$authUrl = $client->createAuthUrl ();
-			
-			echo '<ol start="4">';
-			echo '    <li>Access to an <a href="' . $authUrl . '" target="_blank">auth page</a> and obtain your access code.</li>';
-			echo '    <li>Save the token via the following form.</li>';
-			echo '</ol>';
-			echo '<form name="input" action="#" method="POST">';
-			echo '    <p><b>' . __ ( "Access Code:", 'did2_ab_testing' ) . ' </b><input type="text" name="did2_ab_testing_access_token" value="" size="35"></p>';
-			echo '    <input type="submit" class="button button-primary" name="did2_ab_testing_authorize" value="' . __ ( "Save Access Code", 'did2_ab_testing' ) . '"/>';
-			echo '</form>';
-			return;
-		} catch (exception $e ) {
-			echo $e;
-			return;
-		}
-		?>
-	<?php endif; ?>
-<?php else : ?>
-	<p>Authenticated!</p>
-	<p>You can see PV, RPM and so on for each templates on this page</p>
-	
-	
-	<form name="did2_ab_testing_reset_auth_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
-		<?php wp_nonce_field('did2_ab_testing_reset_auth', 'did2_ab_testing_nonce'); ?>
-		<input type="hidden" name="action" value="reset_auth">
-		<input
-			type="submit"
-			name="ResetAuth"
-			class="button"
-			value="Clear Google Access Token"
-		>
-	</form>
-<?php endif; ?>
-
 <form method="post" action="options.php">
 <?php settings_fields( 'did2_ab_testing_options_group' ); ?>
 <?php do_settings_sections( 'did2_ab_testing_options_group' ); ?>
@@ -438,7 +341,31 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<th colspan="3">Template Auto Switch Settings</th>
 		<th colspan="1">AdSense Settings</th>
 		<?php if( $can_use_api ) : ?>
-			<th colspan="2">AdSense Report</th>
+			<th colspan="2" valign="center" style="vertical-align: center">
+				<span id="did2_ab_testing_reset_auth_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
+					<table style="width: 100%;"><thead><tr>
+					<th>AdSense Report</th>
+					<th style="text-align: right;" >
+					<input
+						type="submit"
+						name="ResetAuth"
+						class="button"
+						value="Clear Auth"
+						onclick="
+							var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+							form.append(jQuery('<?php echo htmlspecialchars( wp_nonce_field('did2_ab_testing_reset_auth', 'did2_ab_testing_nonce', false, false) ); ?>'));
+							form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+							form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'reset_auth'}));
+							form.append(jQuery('<input />', {type: 'hidden', name: 'ResetAuth', value: 'ResetAuth'}));
+							form.submit();
+							return false;
+						"
+						style="font-weight: normal;"
+					>
+					</th>
+					</tr></thead></table>
+				</span>
+			</th>
 		<?php else: ?>
 			<th rowspan="2">AdSense Report</th>
 		<?php endif; ?>
@@ -606,30 +533,151 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				name="did2_ab_testing_options[adsense_custom_channel_id_<?php echo $theme_dir_name; ?>]"
 				value="<?php echo ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) ? $options[ "adsense_custom_channel_id_" . $theme_dir_name ] : 0 ); ?>"
 			>
+			<?php if ( $can_use_api ) : ?>
+				<input type="button" name="did2_ab_testing_new_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="New" class="button"
+					onclick=""
+				/>
+			<?php else : ?>
+				<input type="button" name="did2_ab_testing_new_custom_channel_<?php echo $theme_dir_name_esc; ?>" value="New" class="button"
+					onclick='window.open("https://www.google.com/adsense/app#myads-viewall-channels/product=SELF_SERVICE_CONTENT_ADS")'
+				/>
+			<?php endif; ?>
 		</td>
 		<?php if( $can_use_api ) : ?>
-		<td class="pv">
-			<?php
-				$pv = $adsense_result[$theme_dir_name]['PV'];
-				if ( $pv >= 0 ) :
-					$pv_percentage = (100 * $pv) / $adsense_result['MAX_PV'];
-			?>
-					<span class="val"><?php echo $pv; ?></span><div class="max"><span class="bar" style="width: <?php echo $pv_percentage; ?>%;">&nbsp;</span></div>
-			<?php else : ?>
+			<td class="pv">
+				<?php
+					$pv = $adsense_result[$theme_dir_name]['PV'];
+					if ( $pv >= 0 ) :
+						$pv_percentage = (100 * $pv) / $adsense_result['MAX_PV'];
+				?>
+						<span class="val"><?php echo $pv; ?></span><div class="max"><span class="bar" style="width: <?php echo $pv_percentage; ?>%;">&nbsp;</span></div>
+				<?php else : ?>
+						<span class="val">FATAL ERROR</span>
+				<?php endif; ?>
+			</td>
+			<td class="rpm">
+				<?php
+					$rpm = $adsense_result[$theme_dir_name]['RPM'];
+					if ( $rpm >= 0) :
+						$rpm_percentage = (100 * $rpm) / $adsense_result['MAX_RPM'];
+				?>
+					<span class="val"><?php echo $rpm; ?></span><div class="max"><span class="bar" style="width: <?php echo $rpm_percentage; ?>%;">&nbsp;</span></div>
+				<?php else : ?>
 					<span class="val">FATAL ERROR</span>
+				<?php endif; ?>
+			</td>
+		<?php else : ?>
+			<?php if ( ! $auth_form_printed ) : ?>
+				<?php $auth_form_printed = true; ?>
+			
+				<td rowspan="<?php echo count($themes); ?>" id="google_auth">
+					<ol>
+						<li>Access to the <a href="https://console.developers.google.com/" target="_blank" title="google developers console">google developers console</a> and create new project.</li>
+						<li>Generate Client ID and Client Secret for native applications.</li>
+						<li>Save them via the following form.</li>
+					</ol>
+					<div id="did2_ab_testing_save_oauth_settings_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
+						<table class="">
+							<tbody id="">
+								<tr valign="center">
+									<th scope="row" style="text-align: left;">Client ID</th>
+									<td>
+										<input type="text" name="did2_ab_testing_oauth_client_id" value="<?php echo get_option( 'did2_ab_testing_oauth_client_id' ); ?>" size="35" />
+									</td>
+								</tr>
+								<tr valign="center">
+									<th scope="row" style="text-align: left;">Client Secret</th>
+									<td>
+										<input type="text" name="did2_ab_testing_oauth_client_secret" value="<?php echo get_option( 'did2_ab_testing_oauth_client_secret' ); ?>" size="35" />
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<input
+							type="submit"
+							name="SaveOAuthSettings"
+							class="button button-primary"
+							value="Save Client ID and Client Secret"
+							onclick="
+								var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+								jQuery('#did2_ab_testing_save_oauth_settings_form input').each(function(){
+									var input = jQuery(this);
+									form.append(jQuery('<input />', {type: input.attr('type'), name: input.attr('name'), value: input.attr('value')}));
+								});
+								form.append(jQuery('<?php echo htmlspecialchars( wp_nonce_field('did2_ab_testing_save_oauth_settings', 'did2_ab_testing_nonce', false, false) ); ?>'));
+								form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+								form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'save_oauth_settings'}));
+								form.append(jQuery('<input />', {type: 'hidden', name: 'SaveOAuthSettings', value: 'SaveOAuthSettings'}));
+								form.submit();
+								return false;
+							"
+						/>
+					</div>
+					
+					<?php if( get_option( 'did2_ab_testing_oauth_client_id' ) && get_option( 'did2_ab_testing_oauth_client_secret' )) : ?>
+						<?php
+						try {
+							set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
+							require_once 'Google/Client.php';
+							require_once 'Google/Service/AdSense.php';
+							
+							$client = new Google_Client();
+							$client->setAccessType ( 'offline' );
+							$client->setRedirectUri ( 'urn:ietf:wg:oauth:2.0:oob' );
+							
+							$client->setClientId ( get_option( 'did2_ab_testing_oauth_client_id' ) );
+							$client->setClientSecret ( get_option( 'did2_ab_testing_oauth_client_secret' ) );
+							
+							$adsense = new Google_Service_AdSense ( $client );
+							
+							$client->setScopes ( array (
+								//"https://www.googleapis.com/auth/adsense.readonly"
+								"https://www.googleapis.com/auth/adsense"
+							));
+							$authUrl = $client->createAuthUrl ();
+						?>
+							
+							<ol start="4">
+								<li>Access to an <a href="<?php echo $authUrl; ?>" target="_blank">auth page</a> and obtain your access code.</li>
+								<li>Save the token via the following form.</li>
+							</ol>
+							<div id="did2_ab_testing_save_access_code" name="input" action="#" method="POST">
+								<table class="">
+									<tbody id="">
+										<tr valign="center">
+											<th scope="row" style="text-align: left;"><b><?php echo __ ( "Access Code", 'did2_ab_testing' ); ?></b></th>
+											<td>
+												<input type="text" name="did2_ab_testing_access_token" value="" size="35">
+											</td>
+										</tr>
+									</tbody>
+								</table>
+
+								<input type="submit" class="button button-primary" name="did2_ab_testing_authorize" value="<?php echo __ ( "Save Access Code", 'did2_ab_testing' ); ?>"
+									onclick = "
+										var form = jQuery('<form/>', {method: 'post', action: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'});
+										jQuery('#did2_ab_testing_save_access_code input').each(function(){
+											var input = jQuery(this);
+											form.append(jQuery('<input />', {type: input.attr('type'), name: input.attr('name'), value: input.attr('value')}));
+										});
+										form.append(jQuery('<?php echo htmlspecialchars( wp_nonce_field('did2_ab_testing_save_access_token', 'did2_ab_testing_nonce', false, false) ); ?>'));
+										form.append(jQuery('<input />', {type: 'hidden', name: '_wp_http_referer', value: '<?php echo esc_url($_SERVER['REQUEST_URI']); ?>'}));
+										form.append(jQuery('<input />', {type: 'hidden', name: 'action', value: 'save_oauth_settings'}));
+										form.append(jQuery('<input />', {type: 'hidden', name: 'SaveAccessToken', value: 'SaveAccessToken'}));
+										form.submit();
+										return false;		
+									"
+								/>
+							</div>
+						<?php
+						} catch (exception $e ) {
+							echo $e;
+							return;
+						}
+						?>
+					<?php endif; ?>
+				</td>
 			<?php endif; ?>
-		</td>
-		<td class="rpm">
-			<?php
-				$rpm = $adsense_result[$theme_dir_name]['RPM'];
-				if ( $rpm >= 0) :
-					$rpm_percentage = (100 * $rpm) / $adsense_result['MAX_RPM'];
-			?>
-				<span class="val"><?php echo $rpm; ?></span><div class="max"><span class="bar" style="width: <?php echo $rpm_percentage; ?>%;">&nbsp;</span></div>
-			<?php else : ?>
-				<span class="val">FATAL ERROR</span>
-			<?php endif; ?>
-		</td>
 		<?php endif; ?>
 	</tr>
 	
@@ -759,83 +807,6 @@ https://support.google.com/adsense/answer/1354736?hl=en
 <?php submit_button(); ?>
 </form>
 
-<h3>Duplicate Template</h3>
-
-<form name="did_ab_testing_duplicate_template_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
-	<?php wp_nonce_field('did2_ab_testing_duplicate', 'did2_ab_testing_nonce'); ?>
-	<input type="hidden" name="action" value="duplicate">
-	<table class="">
-	<tbody id="">
-	<tr valign="center">
-		<th scope="row" style="text-align: left;">Copy FROM</th>
-		<td>
-			<select name="copy_from">
-				<?php
-				$themes = wp_get_themes();
-				foreach( $themes as $theme_dir_name => $theme ) {
-				?>
-					<option value="<?php echo $theme_dir_name; ?>"><?php echo $theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?></option>	
-				<?php
-				}
-				?>
-			</select>
-		</td>
-	</tr>
-	<tr valign="center">
-		<th scope="row" style="text-align: left;">New Template Name</th>
-		<td>
-			<input type="text" name="new_name" style="width:100%;" value="New Template Name Here">
-		</td>
-	</tr>
-	<tr valign="center">
-		<th scope="row" style="text-align: left;">New Template Directory Name</th>
-		<td>
-			<input type="text" name="new_dir_name" style="width:100%;" value="new-template-dir-name-here">
-		</td>
-	</tr>
-	</tbody>
-	</table>
-	<input
-		type="submit"
-		name="Duplicate"
-		class="button button-primary"
-		value="Duplicate"
-	>
-</form>
-
-<h3>Diff Two Templates</h3>
-
-<form name="did_ab_testing_diff_template_form" method="get" action="tools.php">
-	<input type="hidden" name="page" value="did2-ab-testing/diff-themes.php">
-	<input type="hidden" name="action" value="diff">
-			<select name="theme_a">
-				<?php
-				$themes = wp_get_themes();
-				foreach( $themes as $theme_dir_name => $theme ) {
-				?>
-					<option value="<?php echo $theme_dir_name; ?>"><?php echo $theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?></option>	
-				<?php
-				}
-				?>
-			</select>
-
-			<select name="theme_b">
-				<?php
-				$themes = wp_get_themes();
-				foreach( $themes as $theme_dir_name => $theme ) {
-				?>
-					<option value="<?php echo $theme_dir_name; ?>"><?php echo $theme->get( 'Name' ) . ' (' . $theme_dir_name . ')' ; ?></option>	
-				<?php
-				}
-				?>
-			</select>
-	<input
-		type="submit"
-		name="submit"
-		class="button button-primary"
-		value="Show Diff"
-	>
-</form>
 <?php
 }
 

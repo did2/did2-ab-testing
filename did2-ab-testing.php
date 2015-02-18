@@ -356,6 +356,9 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 	$can_use_api = !(! get_option( 'did2_ab_testing_access_token') || get_option( 'did2_ab_testing_access_token' ) == "");
 ?>
 
+<?php
+	$adsense_report_column_num = 4;
+?>
 <table class="theme_list">
 <thead>
 	<tr class="group">
@@ -363,7 +366,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<th colspan="3">Template Auto Switch Settings</th>
 		<th colspan="1">AdSense Settings</th>
 		<?php if( $can_use_api ) : ?>
-			<th colspan="2" valign="center" style="vertical-align: center">
+			<th colspan="<?php echo $adsense_report_column_num; ?>" valign="center" style="vertical-align: center">
 				<span id="did2_ab_testing_reset_auth_form" method="post" action="<?php echo esc_url($_SERVER['REQUEST_URI']); ?>">
 					<table style="width: 100%;"><thead><tr>
 					<th>AdSense Report</th>
@@ -389,7 +392,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				</span>
 			</th>
 		<?php else: ?>
-			<th rowspan="2">AdSense Report</th>
+			<th rowspan="<?php echo $adsense_report_column_num; ?>">AdSense Report</th>
 		<?php endif; ?>
 	</tr>
 	<tr>
@@ -398,8 +401,12 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<th>Ratio (%)</th>
 		<th>Custom Channel ID</th>
 		<?php if( $can_use_api ) : ?>
+			<th>Custom Channel Name</th>
 			<th>PV</th>
+			<th>CPC</th>
 			<th>RPM</th>
+			<th>Rev.</th>
+			<th>UCB*</th>
 		<?php else: ?>
 
 		<?php endif; ?>
@@ -413,22 +420,51 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 	if( $can_use_api ) {
 		$adsense_result = array();
 		$adsense_result['MAX_PV'] = 1;
+		$adsense_result['MAX_CPC'] = 1.0;
 		$adsense_result['MAX_RPM'] = 1.0;
+		$adsense_result['MAX_EARNINGS'] = 1.0;
+		
+		if( get_option( 'did2_ab_testing_access_token' ) ){
+			require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
+			$auth = new AdSenseAuth();
+			$auth->authenticate ( 'default' );
+			$adSense = $auth->getAdSenseService();
+			
+			$accounts = $adSense->accounts->listAccounts();
+			$accountId = $accounts['items'][0]['id'];
+			$adClients = $adSense->accounts_adclients->listAccountsAdclients($accountId);
+			$adClientId = $adClients['items'][1]['id'];
+			//var_dump($adClients['items'][2]['id']);
+			
+			//echo $accountId . ', ' . $adClientId;
+			$customChannelsRaw = $adSense->accounts_customchannels->listAccountsCustomchannels($accountId, $adClientId);
+			
+			//var_dump($customChannels);
+			$customChannels = array();
+			foreach( $themes as $theme_dir_name => $theme ) {
+				$short_channel_id = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
+				foreach ( $customChannelsRaw as $channel) {
+					if( strpos( $channel['id'], $short_channel_id) ) {
+						$customChannels[$short_channel_id] = $channel;
+					}
+					//echo $channel['id'] . ' ' . $channel['name'] . '<br />';
+				}
+			}
+			
+			//$customChannels = $adSense->customchannels->listCustomchannels($adClientId);
+			
+			//var_dump($customChannels);
+		}
 		
 		foreach( $themes as $theme_dir_name => $theme) {
 			if(isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
 				$channel = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
 				if( get_option( 'did2_ab_testing_access_token' ) ){
-					require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
-					$auth = new AdSenseAuth();
-					$auth->authenticate ( 'default' );
-					$adSense = $auth->getAdSenseService();
-					
 					$from = date ( 'Y-m-d', time () - 13 * 24 * 60 * 60 );
 					$to = date ( 'Y-m-d', time ());
 					$optParams = array (
 						'metric' => array (
-							'PAGE_VIEWS', 'PAGE_VIEWS_RPM'
+							'PAGE_VIEWS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS'
 						),
 						//'dimension' => 'DATE',//'CUSTOM_CHANNEL_ID',
 						//'sort' => 'DATE',//'CUSTOM_CHANNEL_ID',
@@ -450,8 +486,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 						echo '<!-- ';
 						var_dump ($optParams);
 						echo ' -->';
-						//$from = '2015-01-30';
-						//$to = '2015-02-04';
+
 							$data = $adSense->reports->generate ( $from, $to, $optParams );
 						//	set_transient ( $serial, $data, 60/*get_option ( 'gads_dash_cachetime' )*/ );
 							echo '<!-- ';
@@ -460,8 +495,12 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							//echo '<b>' . $data['totals'][0] . '</b>';
 							$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
 							$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
-							$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][1];
+							$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][1];
+							$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
+							$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][2];
 							$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
+							$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][3];
+							$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
 						//} else {
 						//	$data = $transient;
 						//}
@@ -469,7 +508,9 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 						//if (get_option ( '_token' )) {
 							//echo did2_ab_testing_pretty_error ( $e );
 							$adsense_result[$theme_dir_name]['PV'] = -1;
+							$adsense_result[$theme_dir_name]['CPC'] = -1;
 							$adsense_result[$theme_dir_name]['RPM'] = -1;
+							$adsense_result[$theme_dir_name]['EARNINGS'] = -1;
 							echo '<!--' . $e . '-->';
 							return;
 						//}
@@ -608,6 +649,15 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			<?php endif; ?>
 		</td>
 		<?php if( $can_use_api ) : ?>
+			<td class="channel_name">
+				<?php
+					if ( isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
+						echo $customChannels[$options[ "adsense_custom_channel_id_" . $theme_dir_name ]]['name'];
+					} else {
+						echo 'N/A';
+					}
+				?>
+			</td>
 			<td class="pv">
 				<?php
 					$pv = $adsense_result[$theme_dir_name]['PV'];
@@ -619,16 +669,50 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 						<span class="val">FATAL ERROR</span>
 				<?php endif; ?>
 			</td>
+			<td class="cpc">
+				<?php
+					$cpc = $adsense_result[$theme_dir_name]['CPC'];
+					if ( $cpc >= 0 ) :
+						$cpc_percentage = (100 * $cpc) / $adsense_result['MAX_CPC'];
+				?>
+						<span class="val"><?php echo $cpc; ?></span>
+						<!--<div class="max"><span class="bar" style="width: <?php echo $cpc_percentage; ?>%;">&nbsp;</span></div>-->
+				<?php else : ?>
+						<span class="val">FATAL ERROR</span>
+				<?php endif; ?>
+			</td>
 			<td class="rpm">
 				<?php
 					$rpm = $adsense_result[$theme_dir_name]['RPM'];
 					if ( $rpm >= 0) :
 						$rpm_percentage = (100 * $rpm) / $adsense_result['MAX_RPM'];
 				?>
-					<span class="val"><?php echo $rpm; ?></span><div class="max"><span class="bar" style="width: <?php echo $rpm_percentage; ?>%;">&nbsp;</span></div>
+					<span class="val"><?php /* echo $rpm;*/ ?></span><div class="max"><span class="bar" style="width: <?php echo $rpm_percentage; ?>%;">&nbsp;</span></div>
 				<?php else : ?>
 					<span class="val">FATAL ERROR</span>
 				<?php endif; ?>
+			</td>
+			<td class="earnings">
+				<?php
+					$earnings = $adsense_result[$theme_dir_name]['EARNINGS'];
+					if ( $earnings >= 0 ) :
+						$earnings_percentage = (100 * $cpc) / $adsense_result['MAX_EARNINGS'];
+				?>
+						<span class="val"><?php echo $earnings; ?></span>
+						<!--<div class="max"><span class="bar" style="width: <?php echo $earnings_percentage; ?>%;">&nbsp;</span></div>-->
+				<?php else : ?>
+						<span class="val">FATAL ERROR</span>
+				<?php endif; ?>
+			</td>
+			<td class="ubc">
+				<?php
+					if($pv > 0) {
+						$ubc = $rpm + sqrt((log($adsense_result['MAX_PV']))/(2*$pv));
+					} else {
+						$ubc = 'INF';
+					}
+				?>
+				<span><?php echo $ubc; ?></span>
 			</td>
 		<?php else : ?>
 			<?php if ( ! $auth_form_printed ) : ?>

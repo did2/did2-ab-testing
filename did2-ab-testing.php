@@ -465,51 +465,55 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				if( get_option( 'did2_ab_testing_access_token' ) ){
 					$from = date ( 'Y-m-d', time () - 13 * 24 * 60 * 60 );
 					$to = date ( 'Y-m-d', time ());
+					$param_metric = array ('PAGE_VIEWS', 'CLICKS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS');
+					$param_filter = array ('CUSTOM_CHANNEL_ID=@' . $channel);
+					$param_timezone = '1';
 					$optParams = array (
-						'metric' => array (
-							'PAGE_VIEWS', 'CLICKS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS'
-						),
+						'metric' => $param_metric,
 						//'dimension' => 'DATE',//'CUSTOM_CHANNEL_ID',
 						//'sort' => 'DATE',//'CUSTOM_CHANNEL_ID',
-						'filter' => array(
-							'CUSTOM_CHANNEL_ID=@' . $channel
-						),
-						'useTimezoneReporting' => '1'//get_option ( 'gads_dash_timezone' ) 
+						'filter' => $param_filter,
+						'useTimezoneReporting' => $param_timezone
 					);
 					
 					try {
-						/*$serial = 'gadsdash_qr1' . str_replace ( array (
-							',',
-							'-',
-							date ( 'Y' ) 
-							), "", $from . $to . 1 . $query_adsense );
+						$serial = 'did2_ab_testing'
+							. '|' . $from
+							. '|' . $to
+							. '|' . implode( '_', $param_metric)
+							. '|' . implode( '_', $param_filter)
+							. '|' . $param_timezone;
 						$transient = get_transient ( $serial );
-						*/ //if (empty ( $transient )) {
-						//echo 'ppp';
-						echo '<!-- ';
-						var_dump ($optParams);
-						echo ' -->';
-
+						echo 'serial: ' . $serial . '<br />';
+						echo 'transient: ' . print_r($transient, true) . '<br />';
+						if (empty ( $transient )) {
+							echo 'cache: miss<br />';
+							//echo '<!-- ';
+							//var_dump ($optParams);
+							//echo ' -->';
+						
 							$data = $adSense->reports->generate ( $from, $to, $optParams );
-						//	set_transient ( $serial, $data, 60/*get_option ( 'gads_dash_cachetime' )*/ );
-							echo '<!-- ';
-							var_dump( $data );
-							echo ' -->';
-							//echo '<b>' . $data['totals'][0] . '</b>';
-							$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
-							$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
-							$adsense_result[$theme_dir_name]['CLICKS'] = $data['totals'][1];
-							$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
-							$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][2];
-							$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
-							$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][3];
-							$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
-							$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][4];
-							$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
-						//} else {
-						//	$data = $transient;
-						//}
+							set_transient ( $serial, $data, 60*30 );
+						} else {
+							echo 'cache: hit<br />';
+							$data = $transient;
+						}
+						echo '<!-- ';
+						var_dump( $data );
+						echo ' -->';
+						//echo '<b>' . $data['totals'][0] . '</b>';
+						$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
+						$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
+						$adsense_result[$theme_dir_name]['CLICKS'] = $data['totals'][1];
+						$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
+						$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][2];
+						$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
+						$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][3];
+						$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
+						$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][4];
+						$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
 					} catch ( exception $e ) {
+							echo 'error: ' . $e;
 						//if (get_option ( '_token' )) {
 							//echo did2_ab_testing_pretty_error ( $e );
 							$adsense_result[$theme_dir_name]['PV'] = -1;

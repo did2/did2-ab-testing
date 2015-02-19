@@ -338,7 +338,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 ?>
 
 <div class="wrap">
-<h2>did2 A/B Testing Settings</h2>
+<h2>did2 A/B Testing Settings <span onclick='jQuery(".verbose").toggle();'>[v]</span></h2>
 <hr />
 
 <form method="post" action="options.php">
@@ -354,6 +354,175 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 
 <?php 
 	$can_use_api = !(! get_option( 'did2_ab_testing_access_token') || get_option( 'did2_ab_testing_access_token' ) == "");
+?>
+
+<?php
+	if( $can_use_api ) {
+		$themes = wp_get_themes();
+		
+		$adsense_result = array();
+		$adsense_result['MAX_PV'] = 1;
+		$adsense_result['MAX_CLICKS'] = 1;
+		$adsense_result['MAX_CPC'] = 1.0;
+		$adsense_result['MAX_RPM'] = 1.0;
+		$adsense_result['MAX_EARNINGS'] = 1.0;
+		
+		if( get_option( 'did2_ab_testing_access_token' ) ){
+			require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
+			$auth = new AdSenseAuth();
+			$auth->authenticate ( 'default' );
+			$adSense = $auth->getAdSenseService();
+			
+			$accounts = $adSense->accounts->listAccounts();
+			$accountId = $accounts['items'][0]['id'];
+			$adClients = $adSense->accounts_adclients->listAccountsAdclients($accountId);
+			$adClientId = $adClients['items'][1]['id'];
+			//var_dump($adClients['items'][2]['id']);
+			
+			//echo $accountId . ', ' . $adClientId;
+			$customChannelsRaw = $adSense->accounts_customchannels->listAccountsCustomchannels($accountId, $adClientId);
+			
+			//var_dump($customChannels);
+			$customChannels = array();
+			foreach( $themes as $theme_dir_name => $theme ) {
+				$short_channel_id = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
+				foreach ( $customChannelsRaw as $channel) {
+					if( strpos( $channel['id'], $short_channel_id) ) {
+						$customChannels[$short_channel_id] = $channel;
+					}
+					//echo $channel['id'] . ' ' . $channel['name'] . '<br />';
+				}
+			}
+			
+			//$customChannels = $adSense->customchannels->listCustomchannels($adClientId);
+			
+			//var_dump($customChannels);
+		}
+
+		echo_v('BIGIN AdSense Report Retrieval');
+		foreach( $themes as $theme_dir_name => $theme) {
+			if(isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
+				$channel = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
+				if( get_option( 'did2_ab_testing_access_token' ) ){
+					$from = date ( 'Y-m-d', time () - 1 * 24 * 60 * 60 );
+					$to = date ( 'Y-m-d', time ());
+					$param_metric = array ('PAGE_VIEWS', 'CLICKS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS');
+					$param_filter = array ('CUSTOM_CHANNEL_ID=@' . $channel);
+					$param_timezone = '1';
+					$optParams = array (
+						'metric' => $param_metric,
+						//'dimension' => 'DATE',//'CUSTOM_CHANNEL_ID',
+						//'sort' => 'DATE',//'CUSTOM_CHANNEL_ID',
+						'filter' => $param_filter,
+						'useTimezoneReporting' => $param_timezone
+					);
+					
+					try {
+						$serial = 'did2_ab_testing'
+							. '|' . $from
+							. '|' . $to
+							. '|' . implode( '_', $param_metric)
+							. '|' . implode( '_', $param_filter)
+							. '|' . $param_timezone;
+						$transient = get_transient ( $serial );
+						echo_v( 'serial: ' . $serial);
+						echo_v( 'transient: ' . print_r($transient, true));
+						if (empty ( $transient )) {
+							echo_v('cache: miss');
+							//echo '<!-- ';
+							//var_dump ($optParams);
+							//echo ' -->';
+						
+							$data = $adSense->reports->generate ( $from, $to, $optParams );
+							set_transient ( $serial, $data, 60*30 );
+						} else {
+							echo_v('cache: hit<br />');
+							$data = $transient;
+						}
+						
+						echo_v(print_r($data, true));
+						//echo '<b>' . $data['totals'][0] . '</b>';
+						$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
+						$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
+						$adsense_result[$theme_dir_name]['CLICKS'] = $data['totals'][1];
+						$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
+						$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][2];
+						$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
+						$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][3];
+						$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
+						$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][4];
+						$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
+					} catch ( exception $e ) {
+							echo 'error: ' . $e;
+						//if (get_option ( '_token' )) {
+							//echo did2_ab_testing_pretty_error ( $e );
+							$adsense_result[$theme_dir_name]['PV'] = -1;
+							$adsense_result[$theme_dir_name]['CLICKS'] = -1;
+							$adsense_result[$theme_dir_name]['CPC'] = -1;
+							$adsense_result[$theme_dir_name]['RPM'] = -1;
+							$adsense_result[$theme_dir_name]['EARNINGS'] = -1;
+							echo '<!--' . $e . '-->';
+							return;
+						//}
+					}
+				} else {
+					echo 'no access token';
+				}
+			} else {
+				//$adsense_result[$theme_dir_name]['RPM'] = 0;
+			}
+		}
+		echo_v('END AdSense Report Retrieval');
+		
+		// Thompson Sampling
+		
+		// https://github.com/tomofumi-nakano/thompson_sampling
+		require_once dirname(__FILE__) . '/multi-armed-bandit/rbeta.php';
+		$beta = array();
+		foreach( $themes as $theme_dir_name => $theme) {
+			$clicks = $adsense_result[$theme_dir_name]['CLICKS'];
+			$pv = $adsense_result[$theme_dir_name]['PV'];
+			
+			if( $clicks > 0 && $pv > 0) {
+				$beta[ $theme_dir_name ] = new RBetaQ($clicks+1, $pv-$clicks+1);
+			}
+		}
+		
+		$theta = array();
+		$theta_max = 0;
+		$theta_argmax = $themes[0];
+		foreach( $themes as $theme_dir_name => $theme) {
+			if ( isset( $beta[ $theme_dir_name ] )) {
+				$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
+				if( $theta_max < $theta[ $theme_dir_name ]) {
+					$theta_max = $theta[ $theme_dir_name ];
+					$theta_argmax = $theme_dir_name;
+				}
+			}
+		}
+		
+		echo_v('$theta_max: ' . $theta_argmax);
+		
+		$thompson_sampling_arm = $theta_argmax;
+		
+		
+		$thompson_sampling_percent = array_fill_keys( array_keys( $themes ), 0);
+		for( $i = 0; $i < 1000; $i++ ) {
+			$theta = array();
+			$theta_max = 0;
+			$theta_argmax = $themes[0];
+			foreach( $themes as $theme_dir_name => $theme) {
+				if ( isset( $beta[ $theme_dir_name ]) ) {
+					$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
+					if( $theta_max < $theta[ $theme_dir_name ]) {
+						$theta_max = $theta[ $theme_dir_name ];
+						$theta_argmax = $theme_dir_name;
+					}
+				}
+			}
+			$thompson_sampling_percent[ $theta_argmax ] = 0.1 + $thompson_sampling_percent[ $theta_argmax ];
+		}
+	}
 ?>
 
 <?php
@@ -418,171 +587,6 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 <tbody id="themes">
 <?php
 	$themes = wp_get_themes();
-	
-	if( $can_use_api ) {
-		$adsense_result = array();
-		$adsense_result['MAX_PV'] = 1;
-		$adsense_result['MAX_CLICKS'] = 1;
-		$adsense_result['MAX_CPC'] = 1.0;
-		$adsense_result['MAX_RPM'] = 1.0;
-		$adsense_result['MAX_EARNINGS'] = 1.0;
-		
-		if( get_option( 'did2_ab_testing_access_token' ) ){
-			require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
-			$auth = new AdSenseAuth();
-			$auth->authenticate ( 'default' );
-			$adSense = $auth->getAdSenseService();
-			
-			$accounts = $adSense->accounts->listAccounts();
-			$accountId = $accounts['items'][0]['id'];
-			$adClients = $adSense->accounts_adclients->listAccountsAdclients($accountId);
-			$adClientId = $adClients['items'][1]['id'];
-			//var_dump($adClients['items'][2]['id']);
-			
-			//echo $accountId . ', ' . $adClientId;
-			$customChannelsRaw = $adSense->accounts_customchannels->listAccountsCustomchannels($accountId, $adClientId);
-			
-			//var_dump($customChannels);
-			$customChannels = array();
-			foreach( $themes as $theme_dir_name => $theme ) {
-				$short_channel_id = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
-				foreach ( $customChannelsRaw as $channel) {
-					if( strpos( $channel['id'], $short_channel_id) ) {
-						$customChannels[$short_channel_id] = $channel;
-					}
-					//echo $channel['id'] . ' ' . $channel['name'] . '<br />';
-				}
-			}
-			
-			//$customChannels = $adSense->customchannels->listCustomchannels($adClientId);
-			
-			//var_dump($customChannels);
-		}
-		
-		foreach( $themes as $theme_dir_name => $theme) {
-			if(isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
-				$channel = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
-				if( get_option( 'did2_ab_testing_access_token' ) ){
-					$from = date ( 'Y-m-d', time () - 13 * 24 * 60 * 60 );
-					$to = date ( 'Y-m-d', time ());
-					$param_metric = array ('PAGE_VIEWS', 'CLICKS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS');
-					$param_filter = array ('CUSTOM_CHANNEL_ID=@' . $channel);
-					$param_timezone = '1';
-					$optParams = array (
-						'metric' => $param_metric,
-						//'dimension' => 'DATE',//'CUSTOM_CHANNEL_ID',
-						//'sort' => 'DATE',//'CUSTOM_CHANNEL_ID',
-						'filter' => $param_filter,
-						'useTimezoneReporting' => $param_timezone
-					);
-					
-					try {
-						$serial = 'did2_ab_testing'
-							. '|' . $from
-							. '|' . $to
-							. '|' . implode( '_', $param_metric)
-							. '|' . implode( '_', $param_filter)
-							. '|' . $param_timezone;
-						$transient = get_transient ( $serial );
-						echo 'serial: ' . $serial . '<br />';
-						echo 'transient: ' . print_r($transient, true) . '<br />';
-						if (empty ( $transient )) {
-							echo 'cache: miss<br />';
-							//echo '<!-- ';
-							//var_dump ($optParams);
-							//echo ' -->';
-						
-							$data = $adSense->reports->generate ( $from, $to, $optParams );
-							set_transient ( $serial, $data, 60*30 );
-						} else {
-							echo 'cache: hit<br />';
-							$data = $transient;
-						}
-						echo '<!-- ';
-						var_dump( $data );
-						echo ' -->';
-						//echo '<b>' . $data['totals'][0] . '</b>';
-						$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
-						$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
-						$adsense_result[$theme_dir_name]['CLICKS'] = $data['totals'][1];
-						$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
-						$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][2];
-						$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
-						$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][3];
-						$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
-						$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][4];
-						$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
-					} catch ( exception $e ) {
-							echo 'error: ' . $e;
-						//if (get_option ( '_token' )) {
-							//echo did2_ab_testing_pretty_error ( $e );
-							$adsense_result[$theme_dir_name]['PV'] = -1;
-							$adsense_result[$theme_dir_name]['CLICKS'] = -1;
-							$adsense_result[$theme_dir_name]['CPC'] = -1;
-							$adsense_result[$theme_dir_name]['RPM'] = -1;
-							$adsense_result[$theme_dir_name]['EARNINGS'] = -1;
-							echo '<!--' . $e . '-->';
-							return;
-						//}
-					}
-				} else {
-					echo 'no access token';
-				}
-			} else {
-				//$adsense_result[$theme_dir_name]['RPM'] = 0;
-			}
-		}
-		
-		// Thompson Sampling
-		
-		// https://github.com/tomofumi-nakano/thompson_sampling
-		require_once dirname(__FILE__) . '/multi-armed-bandit/rbeta.php';
-		$beta = array();
-		foreach( $themes as $theme_dir_name => $theme) {
-			$clicks = $adsense_result[$theme_dir_name]['CLICKS'];
-			$pv = $adsense_result[$theme_dir_name]['PV'];
-			
-			if( $clicks > 0 && $pv > 0) {
-				$beta[ $theme_dir_name ] = new RBetaQ($clicks+1, $pv-$clicks+1);
-			}
-		}
-		
-		$theta = array();
-		$theta_max = 0;
-		$theta_argmax = $themes[0];
-		foreach( $themes as $theme_dir_name => $theme) {
-			if ( isset( $beta[ $theme_dir_name ] )) {
-				$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
-				if( $theta_max < $theta[ $theme_dir_name ]) {
-					$theta_max = $theta[ $theme_dir_name ];
-					$theta_argmax = $theme_dir_name;
-				}
-			}
-		}
-		
-		echo $theta_argmax;
-		
-		$thompson_sampling_arm = $theta_argmax;
-		
-		
-		$thompson_sampling_percent = array_fill_keys( array_keys( $themes ), 0);
-		for( $i = 0; $i < 1000; $i++ ) {
-			$theta = array();
-			$theta_max = 0;
-			$theta_argmax = $themes[0];
-			foreach( $themes as $theme_dir_name => $theme) {
-				if ( isset( $beta[ $theme_dir_name ]) ) {
-					$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
-					if( $theta_max < $theta[ $theme_dir_name ]) {
-						$theta_max = $theta[ $theme_dir_name ];
-						$theta_argmax = $theme_dir_name;
-					}
-				}
-			}
-			$thompson_sampling_percent[ $theta_argmax ] = 0.1 + $thompson_sampling_percent[ $theta_argmax ];
-		}
-	//var_dump( $thompson_sampling_percent );
-	}
 ?>
 
 <?php foreach( $themes as $theme_dir_name => $theme ) : ?>
@@ -1237,6 +1241,10 @@ function did2_ab_testing_end_buffering( $content ) {
 	}
 	
 	return $content;
+}
+
+function echo_v( $text ) {
+	echo '<span class="verbose">' . $text . '<br /></span>';
 }
 
 // ------------------------------------------------------------

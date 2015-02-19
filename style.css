@@ -54,7 +54,7 @@ pre.diff del, .did2_ace_del-line {
 }
 
 div#editor {
-	height: 500px;
+	height: 850px;
 }
 
 
@@ -192,4 +192,10 @@ div#editor {
 	
 .theme_list .tool_buttons input[type=button] {
 	color: #0074a2;
+	}
+	
+.verbose {
+	display: none;
+	font-size: 75%;
+	color: #E56B21;
 	}

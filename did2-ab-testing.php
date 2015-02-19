@@ -402,11 +402,13 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<th>Custom Channel ID</th>
 		<?php if( $can_use_api ) : ?>
 			<th>Custom Channel Name</th>
-			<th>PV</th>
-			<th>CPC</th>
-			<th>RPM</th>
-			<th>Rev.</th>
-			<th>UCB*</th>
+			<th class="pv">PV</th>
+			<th class="clicks">Clicks</th>
+			<th class="cpc">CPC</th>
+			<th class="rpm">RPM</th>
+			<th class="earnings">Rev.</th>
+			<th class="ucb">UCB*</th>
+			<th class="ts">TS Ratio</th>
 		<?php else: ?>
 
 		<?php endif; ?>
@@ -420,6 +422,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 	if( $can_use_api ) {
 		$adsense_result = array();
 		$adsense_result['MAX_PV'] = 1;
+		$adsense_result['MAX_CLICKS'] = 1;
 		$adsense_result['MAX_CPC'] = 1.0;
 		$adsense_result['MAX_RPM'] = 1.0;
 		$adsense_result['MAX_EARNINGS'] = 1.0;
@@ -464,7 +467,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 					$to = date ( 'Y-m-d', time ());
 					$optParams = array (
 						'metric' => array (
-							'PAGE_VIEWS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS'
+							'PAGE_VIEWS', 'CLICKS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS'
 						),
 						//'dimension' => 'DATE',//'CUSTOM_CHANNEL_ID',
 						//'sort' => 'DATE',//'CUSTOM_CHANNEL_ID',
@@ -495,11 +498,13 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							//echo '<b>' . $data['totals'][0] . '</b>';
 							$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
 							$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
-							$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][1];
+							$adsense_result[$theme_dir_name]['CLICKS'] = $data['totals'][1];
+							$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
+							$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][2];
 							$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
-							$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][2];
+							$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][3];
 							$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
-							$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][3];
+							$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][4];
 							$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
 						//} else {
 						//	$data = $transient;
@@ -508,6 +513,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 						//if (get_option ( '_token' )) {
 							//echo did2_ab_testing_pretty_error ( $e );
 							$adsense_result[$theme_dir_name]['PV'] = -1;
+							$adsense_result[$theme_dir_name]['CLICKS'] = -1;
 							$adsense_result[$theme_dir_name]['CPC'] = -1;
 							$adsense_result[$theme_dir_name]['RPM'] = -1;
 							$adsense_result[$theme_dir_name]['EARNINGS'] = -1;
@@ -522,6 +528,56 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 				//$adsense_result[$theme_dir_name]['RPM'] = 0;
 			}
 		}
+		
+		// Thompson Sampling
+		
+		// https://github.com/tomofumi-nakano/thompson_sampling
+		require_once dirname(__FILE__) . '/multi-armed-bandit/rbeta.php';
+		$beta = array();
+		foreach( $themes as $theme_dir_name => $theme) {
+			$clicks = $adsense_result[$theme_dir_name]['CLICKS'];
+			$pv = $adsense_result[$theme_dir_name]['PV'];
+			
+			if( $clicks > 0 && $pv > 0) {
+				$beta[ $theme_dir_name ] = new RBetaQ($clicks+1, $pv-$clicks+1);
+			}
+		}
+		
+		$theta = array();
+		$theta_max = 0;
+		$theta_argmax = $themes[0];
+		foreach( $themes as $theme_dir_name => $theme) {
+			if ( isset( $beta[ $theme_dir_name ] )) {
+				$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
+				if( $theta_max < $theta[ $theme_dir_name ]) {
+					$theta_max = $theta[ $theme_dir_name ];
+					$theta_argmax = $theme_dir_name;
+				}
+			}
+		}
+		
+		echo $theta_argmax;
+		
+		$thompson_sampling_arm = $theta_argmax;
+		
+		
+		$thompson_sampling_percent = array_fill_keys( array_keys( $themes ), 0);
+		for( $i = 0; $i < 1000; $i++ ) {
+			$theta = array();
+			$theta_max = 0;
+			$theta_argmax = $themes[0];
+			foreach( $themes as $theme_dir_name => $theme) {
+				if ( isset( $beta[ $theme_dir_name ]) ) {
+					$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
+					if( $theta_max < $theta[ $theme_dir_name ]) {
+						$theta_max = $theta[ $theme_dir_name ];
+						$theta_argmax = $theme_dir_name;
+					}
+				}
+			}
+			$thompson_sampling_percent[ $theta_argmax ] = 0.1 + $thompson_sampling_percent[ $theta_argmax ];
+		}
+	//var_dump( $thompson_sampling_percent );
 	}
 ?>
 
@@ -669,6 +725,18 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 						<span class="val">FATAL ERROR</span>
 				<?php endif; ?>
 			</td>
+			<td class="clicks">
+				<?php
+					$clicks = $adsense_result[$theme_dir_name]['CLICKS'];
+					if ( $clicks >= 0 ) :
+						$clicks_percentage = (100 * $clicks) / $adsense_result['MAX_CLICKS'];
+				?>
+						<span class="val"><?php echo $clicks; ?></span>
+						<!-- <div class="max"><span class="bar" style="width: <?php echo $clicks_percentage; ?>%;">&nbsp;</span></div> -->
+				<?php else : ?>
+						<span class="val">FATAL ERROR</span>
+				<?php endif; ?>
+			</td>
 			<td class="cpc">
 				<?php
 					$cpc = $adsense_result[$theme_dir_name]['CPC'];
@@ -687,7 +755,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 					if ( $rpm >= 0) :
 						$rpm_percentage = (100 * $rpm) / $adsense_result['MAX_RPM'];
 				?>
-					<span class="val"><?php /* echo $rpm;*/ ?></span><div class="max"><span class="bar" style="width: <?php echo $rpm_percentage; ?>%;">&nbsp;</span></div>
+					<span class="val"><?php echo $rpm; ?></span><div class="max"><span class="bar" style="width: <?php echo $rpm_percentage; ?>%;">&nbsp;</span></div>
 				<?php else : ?>
 					<span class="val">FATAL ERROR</span>
 				<?php endif; ?>
@@ -704,7 +772,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 						<span class="val">FATAL ERROR</span>
 				<?php endif; ?>
 			</td>
-			<td class="ubc">
+			<td class="ucb">
 				<?php
 					if($pv > 0) {
 						$ubc = $rpm + sqrt((log($adsense_result['MAX_PV']))/(2*$pv));
@@ -713,6 +781,16 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 					}
 				?>
 				<span><?php echo $ubc; ?></span>
+			</td>
+			<td class="ts">
+				<?php
+					if($clicks > 0) {
+						$ts_ratio = $thompson_sampling_percent[ $theme_dir_name ];
+					} else {
+						$ts_ratio = 0;
+					}
+				?>
+				<span><?php echo $ts_ratio; ?></span>
 			</td>
 		<?php else : ?>
 			<?php if ( ! $auth_form_printed ) : ?>

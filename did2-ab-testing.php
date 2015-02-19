@@ -55,7 +55,7 @@ function did2_ab_testing_enqueue_scripts( $hook ) {
 	//	case "did2_ab_testing_options":
 	//	case "did2_ab_testing_plugin_editor":
 		wp_enqueue_style('did2_ab_testing_style',  plugins_url('style.css', __FILE__), array());
-		wp_enqueue_script('did2_ab_testing_script_ace',  plugins_url('ace/src-noconflict/ace.js', __FILE__), array('jquery'));
+		wp_enqueue_script('did2_ab_testing_script_ace',  plugins_url('lib/ace/src-noconflict/ace.js', __FILE__), array('jquery'));
 	
 		//wp_enqueue_style('did2_ab_testing_style_bootstrap', 'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css', array());
 		//wp_enqueue_script('did2_ab_testing_script_bootstrap', 'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js', array());
@@ -247,7 +247,7 @@ function did2_ab_testing_process_post() {
 	
 	if ( isset ( $_POST ['SaveAccessToken'] ) && check_admin_referer( 'did2_ab_testing_save_access_token', 'did2_ab_testing_nonce' )) {
 		try {
-		set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
+		set_include_path ( DID2AB_PATH . '/lib/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
 		require_once 'Google/Client.php';
 		require_once 'Google/Service/AdSense.php';
 		$client = new Google_Client();
@@ -367,8 +367,9 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		$adsense_result['MAX_RPM'] = 1.0;
 		$adsense_result['MAX_EARNINGS'] = 1.0;
 		
-		if( get_option( 'did2_ab_testing_access_token' ) ){
-			require_once DID2AB_PATH . '/google-adsense-dashboard-for-wp/function.php';
+		if( get_option( 'did2_ab_testing_access_token' ) ){echo 'ttt';
+			try {
+			require_once DID2AB_PATH . '/lib/google-adsense-dashboard-for-wp/function.php';echo 'aaa';
 			$auth = new AdSenseAuth();
 			$auth->authenticate ( 'default' );
 			$adSense = $auth->getAdSenseService();
@@ -379,7 +380,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			$adClientId = $adClients['items'][1]['id'];
 			//var_dump($adClients['items'][2]['id']);
 			
-			//echo $accountId . ', ' . $adClientId;
+			echo_v($accountId . ', ' . $adClientId);
 			$customChannelsRaw = $adSense->accounts_customchannels->listAccountsCustomchannels($accountId, $adClientId);
 			
 			//var_dump($customChannels);
@@ -397,6 +398,9 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			//$customChannels = $adSense->customchannels->listCustomchannels($adClientId);
 			
 			//var_dump($customChannels);
+			} catch ( exception $e ) {
+				echo 'error: ' . $e;
+			}
 		}
 
 		echo_v('BIGIN AdSense Report Retrieval');
@@ -477,7 +481,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		// Thompson Sampling
 		
 		// https://github.com/tomofumi-nakano/thompson_sampling
-		require_once dirname(__FILE__) . '/multi-armed-bandit/rbeta.php';
+		require_once dirname(__FILE__) . '/lib/multi-armed-bandit/rbeta.php';
 		$beta = array();
 		foreach( $themes as $theme_dir_name => $theme) {
 			$clicks = $adsense_result[$theme_dir_name]['CLICKS'];
@@ -851,7 +855,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 					<?php if( get_option( 'did2_ab_testing_oauth_client_id' ) && get_option( 'did2_ab_testing_oauth_client_secret' )) : ?>
 						<?php
 						try {
-							set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
+							set_include_path ( DID2AB_PATH . '/lib/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
 							require_once 'Google/Client.php';
 							require_once 'Google/Service/AdSense.php';
 							

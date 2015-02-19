@@ -33,7 +33,7 @@ class AdSenseAuth {
 		//if (version_compare ( PHP_VERSION, '5.3.0' ) >= 0) {
 		//	require 'vendor/autoload.php';
 		//} else {
-			set_include_path ( DID2AB_PATH . '/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
+			set_include_path ( DID2AB_PATH . '/lib/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );echo 'qqq';
 			// Include GAPI client
 			//if (! class_exists ( 'Google_Client' )) {
 				require_once 'Google/Client.php';

@@ -72,8 +72,7 @@ function did2_ab_testing_creage_diff_themes_form() {
 
 function diff_themes( $theme_a_dir_name, $theme_b_dir_name) {
 	global $wp_filesystem;
-	//require_once(ABSPATH . 'wp-admin/includes/file.php');
-	require_once dirname(__FILE__) . '/finediff/finediff.php';
+	require_once dirname(__FILE__) . 'lib/finediff/finediff.php';
 
 	$theme_a = wp_get_theme( $theme_a_dir_name );
 	if ( ! $theme_a->exists() )

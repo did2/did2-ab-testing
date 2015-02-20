@@ -439,7 +439,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							//echo ' -->';
 						
 							$data = $adSense->reports->generate ( $from, $to, $optParams );
-							set_transient ( $serial, $data, 60*30 );
+							set_transient ( $serial, $data, 1 * 60 );
 						} else {
 							echo_v('cache: hit<br />');
 							$data = $transient;
@@ -484,12 +484,15 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		// https://github.com/tomofumi-nakano/thompson_sampling
 		require_once dirname(__FILE__) . '/lib/multi-armed-bandit/rbeta.php';
 		$beta = array();
+		$reward = array();
 		foreach( $themes as $theme_dir_name => $theme) {
 			$clicks = $adsense_result[$theme_dir_name]['CLICKS'];
 			$pv = $adsense_result[$theme_dir_name]['PV'];
+			$cpc = $adsense_result[$theme_dir_name]['CPC'];
 			
 			if( $options[ $theme_dir_name ] > 0 && $clicks > 0 && $pv > 0) {
 				$beta[ $theme_dir_name ] = new RBetaQ($clicks+1, $pv-$clicks+1);
+				$reward[ $theme_dir_name ] = $cpc;
 			}
 		}
 		
@@ -498,7 +501,9 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		$theta_argmax = $themes[0];
 		foreach( $themes as $theme_dir_name => $theme) {
 			if ( isset( $beta[ $theme_dir_name ] )) {
-				$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
+				$theta[ $theme_dir_name ] = $reward[ $theme_dir_name ] * $beta[ $theme_dir_name ]->rand();
+				echo_v('Theme: ' . $theme_dir_name);
+				echo_v('Rand: ' . $theta[ $theme_dir_name ]);
 				if( $theta_max < $theta[ $theme_dir_name ]) {
 					$theta_max = $theta[ $theme_dir_name ];
 					$theta_argmax = $theme_dir_name;
@@ -518,7 +523,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			$theta_argmax = $themes[0];
 			foreach( $themes as $theme_dir_name => $theme) {
 				if ( isset( $beta[ $theme_dir_name ]) ) {
-					$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
+					$theta[ $theme_dir_name ] = $reward[ $theme_dir_name ] * $beta[ $theme_dir_name ]->rand();
 					if( $theta_max < $theta[ $theme_dir_name ]) {
 						$theta_max = $theta[ $theme_dir_name ];
 						$theta_argmax = $theme_dir_name;
@@ -1264,12 +1269,15 @@ function did2_ab_testing_setup_theme() {
 		if ( count ( $adsense_result ) > 0 ) {
 			require_once dirname(__FILE__) . '/lib/multi-armed-bandit/rbeta.php';
 			$beta = array();
+			$reward = array();
 			foreach( $themes as $theme_dir_name => $theme) {
 				$clicks = $adsense_result[$theme_dir_name]['CLICKS'];
 				$pv = $adsense_result[$theme_dir_name]['PV'];
+				$cpc = $adsense_result[$theme_dir_name]['CPC'];
 				
 				if( $options[ $theme_dir_name ] > 0 && $clicks > 0 && $pv > 0) {
 					$beta[ $theme_dir_name ] = new RBetaQ($clicks+1, $pv-$clicks+1);
+					$reward[ $theme_dir_name ] = $cpc;
 				}
 			}
 			
@@ -1278,7 +1286,7 @@ function did2_ab_testing_setup_theme() {
 			$theta_argmax = $themes[0];
 			foreach( $themes as $theme_dir_name => $theme) {
 				if ( isset( $beta[ $theme_dir_name ] )) {
-					$theta[ $theme_dir_name ] = $beta[ $theme_dir_name ]->rand();
+					$theta[ $theme_dir_name ] = $reward[ $theme_dir_name ] * $beta[ $theme_dir_name ]->rand();
 					if( $theta_max < $theta[ $theme_dir_name ]) {
 						$theta_max = $theta[ $theme_dir_name ];
 						$theta_argmax = $theme_dir_name;

@@ -404,6 +404,93 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		}
 
 		echo_v('BIGIN AdSense Report Retrieval');
+		// one-time
+//		foreach( $themes as $theme_dir_name => $theme) {
+//			if(isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
+//				$channel = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
+				if( get_option( 'did2_ab_testing_access_token' ) ){
+					$from = get_date_from_gmt(date ( 'Y-m-d H:i:s', time () - 1 * 24 * 60 * 60 ), 'Y-m-d');
+					$to = get_date_from_gmt(date ( 'Y-m-d H:i:s', time ()), 'Y-m-d');
+					$param_metric = array ('PAGE_VIEWS', 'CLICKS', 'COST_PER_CLICK', 'PAGE_VIEWS_RPM', 'EARNINGS');
+					//$param_filter = array ('CUSTOM_CHANNEL_ID=@' . $channel);
+					$param_dimension = 'CUSTOM_CHANNEL_ID';
+					$param_timezone = '1';
+					$optParams = array (
+						'metric' => $param_metric,
+						'dimension' => $param_dimension,
+						//'sort' => 'DATE',//'CUSTOM_CHANNEL_ID',
+						//'filter' => $param_filter,
+						'useTimezoneReporting' => $param_timezone
+					);
+					
+					try {
+						$serial = 'did2_ab_testing'
+							. '|' . $from
+							. '|' . $to
+							. '|' . implode( '_', $param_metric)
+							//. '|' . implode( '_', $param_filter)
+							. '|' . $param_dimension
+							. '|' . $param_timezone
+							. '|' . $options['settings_timestamp'];
+						//$transient = get_transient ( $serial );
+						//echo_v( 'serial: ' . $serial);
+						//echo_v( 'transient: ' . print_r($transient, true));
+						if (empty ( $transient )) {
+							echo_v('cache: miss');
+							//echo '<!-- ';
+							//var_dump ($optParams);
+							//echo ' -->';
+						
+							$report = $adSense->reports->generate ( $from, $to, $optParams );
+							echo_v('<pre>' . print_r ( $report, true ) . '</pre>');
+							set_transient ( $serial, $data, 1 * 60 );
+						} else {
+							echo_v('cache: hit<br />');
+							$report = $transient;
+						}
+						
+						$channel_to_report = array();
+						foreach( $report['rows'] as $i => $row) {
+							//$row[0] = 'ca-pub-xxxx:yyyy' <- 'yyyy' is a channel ID.
+							$channel = explode( ':', $row[0]);
+							echo_v(print_r($channel,true));
+							$channel = $channel[1];
+							echo_v($channel);
+							//$row = { [0]=>'ca-pub-xxx:yyy', [1] => ... data ... }
+							$channel_to_data[$channel] = $row;
+						}
+						
+						foreach( $themes as $theme_dir_name => $theme) {
+							if(isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
+								$channel = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
+								$data = $channel_to_data[ $channel ];
+								echo_v(print_r($data,true));
+								$adsense_result[$theme_dir_name]['PV'] = $data[1];
+								$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
+								$adsense_result[$theme_dir_name]['CLICKS'] = $data[2];
+								$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
+								$adsense_result[$theme_dir_name]['CPC'] = $data[3];
+								$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
+								$adsense_result[$theme_dir_name]['RPM'] = $data[4];
+								$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
+								$adsense_result[$theme_dir_name]['EARNINGS'] = $data[5];
+								$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
+							}
+						}
+					} catch ( exception $e ) {
+							echo 'error: ' . $e;
+							return;
+					}
+				} else {
+					echo 'no access token';
+				}
+//			} else {
+//				//$adsense_result[$theme_dir_name]['RPM'] = 0;
+//			}
+//		}
+		
+		// each
+		if ( false ) {
 		foreach( $themes as $theme_dir_name => $theme) {
 			if(isset( $options[ "adsense_custom_channel_id_" . $theme_dir_name ] ) && $options[ "adsense_custom_channel_id_" . $theme_dir_name ] > 0) {
 				$channel = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
@@ -476,6 +563,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			} else {
 				//$adsense_result[$theme_dir_name]['RPM'] = 0;
 			}
+		}
 		}
 		echo_v('END AdSense Report Retrieval');
 		
@@ -1112,6 +1200,31 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 	</tr>
 <?php endforeach; ?>
 
+</tbody>
+</table>
+
+<table>
+<tbody>
+	<tr>
+		<th>Switch Algorithms</th>
+		<th>Custom Channel ID</th>
+	</tr>
+	<tr>
+		<td>(ALL)</td>
+		<td></td>
+	</tr>
+	<tr>
+		<td>Manual</td>
+		<td></td>
+	</tr>
+	<tr>
+		<td>Thompson Sampling (1day)</td>
+		<td></td>
+	</tr>
+	<tr>
+		<td>Thompso Sampling (7days)</td>
+		<td></td>
+	</tr>
 </tbody>
 </table>
 

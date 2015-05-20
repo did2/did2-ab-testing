@@ -1388,6 +1388,9 @@ function did2_ab_testing_setup_theme() {
 				$pv = $adsense_result[$theme_dir_name]['PV'];
 				$cpc = $adsense_result[$theme_dir_name]['CPC'];
 				
+				if( $options[ $theme_dir_name ] > 0 && $pv < 1000) {
+					$manual_mode = true;
+				}
 				if( $options[ $theme_dir_name ] > 0 && $clicks > 0 && $pv > 0) {
 					$beta[ $theme_dir_name ] = new RBetaQ($clicks+1, $pv-$clicks+1);
 					$reward[ $theme_dir_name ] = $cpc;

@@ -10,6 +10,7 @@ Author URI: http://did2memo.net/
 License: GPL2  
 */
 
+session_cache_limiter('public');
 session_start ();
 
 define( 'DID2AB_PATH' , dirname( __FILE__ ) );
@@ -65,7 +66,6 @@ function did2_ab_testing_enqueue_scripts( $hook ) {
 function duplicate_theme( $from_theme_dir_name, $to_theme_dir_name = '', $to_theme_name = '') {
 	global $wp_filesystem;
 	//require_once(ABSPATH . 'wp-admin/includes/file.php');
-
 	$from_theme = wp_get_theme( $from_theme_dir_name );
 	if ( ! $from_theme->exists() )
 		wp_die( 'Original Theme:' . $from_theme_dir_name . ' does not exist.' );
@@ -73,7 +73,7 @@ function duplicate_theme( $from_theme_dir_name, $to_theme_dir_name = '', $to_the
 	$to_theme = wp_get_theme( $to_theme_dir_name );
 	if ( $to_theme->exists() )
 		wp_die( 'New Theme:' . $to_theme_dir_name . ' already exists.' );		
-
+//wp_die(@fileowner(__FILE__) . __FILE__ . $GLOBALS['_wp_filesystem_direct_method'] . getmyuid());
 	$redirect = wp_nonce_url( 'options-general.php?page=did2_ab_testing_options', '', false, false, array( 'copy_from', 'new_name', 'new_dir_name') );
 	if ( false === ($credentials = request_filesystem_credentials($redirect)) ) {
 		$data = ob_get_contents();
@@ -247,29 +247,29 @@ function did2_ab_testing_process_post() {
 	
 	if ( isset ( $_POST ['SaveAccessToken'] ) && check_admin_referer( 'did2_ab_testing_save_access_token', 'did2_ab_testing_nonce' )) {
 		try {
-		set_include_path ( DID2AB_PATH . '/lib/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
-		require_once 'Google/Client.php';
-		require_once 'Google/Service/AdSense.php';
-		$client = new Google_Client();
-		$client->setAccessType ( 'offline' );
-		$client->setRedirectUri ( 'urn:ietf:wg:oauth:2.0:oob' );
-		
-		$client->setClientId ( get_option( 'did2_ab_testing_oauth_client_id' ) );
-		$client->setClientSecret ( get_option( 'did2_ab_testing_oauth_client_secret' ) );
-		
-		$adsense = new Google_Service_AdSense ( $client );
-		
-		$client->setScopes ( array (
-			//"https://www.googleapis.com/auth/adsense.readonly"
-			"https://www.googleapis.com/auth/adsense"
-		));
-		
-		$client->authenticate ( $_REQUEST ['did2_ab_testing_access_token'] );
-		update_option ( 'did2_ab_testing_access_token_user', 'default');
-		update_option ( 'did2_ab_testing_access_token', $client->getAccessToken() );
-		
-		wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&save_access_token=true') );
-		exit;
+			set_include_path ( DID2AB_PATH . '/lib/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
+			require_once 'Google/Client.php';
+			require_once 'Google/Service/AdSense.php';
+			$client = new Google_Client();
+			$client->setAccessType ( 'offline' );
+			$client->setRedirectUri ( 'urn:ietf:wg:oauth:2.0:oob' );
+			
+			$client->setClientId ( get_option( 'did2_ab_testing_oauth_client_id' ) );
+			$client->setClientSecret ( get_option( 'did2_ab_testing_oauth_client_secret' ) );
+			
+			$adsense = new Google_Service_AdSense ( $client );
+			
+			$client->setScopes ( array (
+				//"https://www.googleapis.com/auth/adsense.readonly"
+				"https://www.googleapis.com/auth/adsense"
+			));
+			
+			$client->authenticate ( $_REQUEST ['did2_ab_testing_access_token'] );
+			update_option ( 'did2_ab_testing_access_token_user', 'default');
+			update_option ( 'did2_ab_testing_access_token', $client->getAccessToken() );
+			
+			wp_redirect( admin_url('options-general.php?page=did2_ab_testing_options&save_access_token=true') );
+			exit;
 		} catch(exception $e) {
 			echo $e;
 			exit;
@@ -338,7 +338,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 ?>
 
 <div class="wrap">
-<h2>did2 A/B Testing Settings <span onclick='jQuery(".verbose").toggle();'>[v]</span></h2>
+<h2>did2 A/B Testing Settings <span onclick='jQuery(".verbose").toggle();'>[show debug message]</span></h2>
 <hr />
 
 <form method="post" action="options.php">
@@ -369,37 +369,38 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		
 		if( get_option( 'did2_ab_testing_access_token' ) ){
 			try {
-			require_once DID2AB_PATH . '/lib/google-adsense-dashboard-for-wp/function.php';
-			$auth = new AdSenseAuth();
-			$auth->authenticate ( 'default' );
-			$adSense = $auth->getAdSenseService();
-			
-			$accounts = $adSense->accounts->listAccounts();
-			$accountId = $accounts['items'][0]['id'];
-			$adClients = $adSense->accounts_adclients->listAccountsAdclients($accountId);
-			$adClientId = $adClients['items'][1]['id'];
-			//var_dump($adClients['items'][2]['id']);
-			
-			echo_v($accountId . ', ' . $adClientId);
-			$customChannelsRaw = $adSense->accounts_customchannels->listAccountsCustomchannels($accountId, $adClientId);
-			
-			//var_dump($customChannels);
-			$customChannels = array();
-			foreach( $themes as $theme_dir_name => $theme ) {
-				$short_channel_id = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
-				foreach ( $customChannelsRaw as $channel) {
-					if( strpos( $channel['id'], $short_channel_id) ) {
-						$customChannels[$short_channel_id] = $channel;
+				require_once DID2AB_PATH . '/lib/google-adsense-dashboard-for-wp/function.php';
+				$auth = new AdSenseAuth();
+				$auth->authenticate ( 'default' );
+				$adSense = $auth->getAdSenseService();
+				
+				$accounts = $adSense->accounts->listAccounts();
+				$accountId = $accounts['items'][0]['id'];
+				$adClients = $adSense->accounts_adclients->listAccountsAdclients($accountId);
+				$adClientId = $adClients['items'][1]['id'];
+				//var_dump($adClients['items'][2]['id']);
+				
+				echo_v($accountId . ', ' . $adClientId);
+				$customChannelsRaw = $adSense->accounts_customchannels->listAccountsCustomchannels($accountId, $adClientId);
+				
+				//var_dump($customChannels);
+				$customChannels = array();
+				foreach( $themes as $theme_dir_name => $theme ) {
+					$short_channel_id = $options[ "adsense_custom_channel_id_" . $theme_dir_name ];
+					foreach ( $customChannelsRaw as $channel) {
+						if( strpos( $channel['id'], $short_channel_id) ) {
+							$customChannels[$short_channel_id] = $channel;
+						}
+						//echo $channel['id'] . ' ' . $channel['name'] . '<br />';
 					}
-					//echo $channel['id'] . ' ' . $channel['name'] . '<br />';
 				}
-			}
-			
-			//$customChannels = $adSense->customchannels->listCustomchannels($adClientId);
-			
-			//var_dump($customChannels);
+				
+				//$customChannels = $adSense->customchannels->listCustomchannels($adClientId);
+				
+				//var_dump($customChannels);
 			} catch ( exception $e ) {
-				echo 'error: ' . $e;
+				echo 'Error<br />';
+				echo_v($e);
 			}
 		}
 
@@ -432,7 +433,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							. '|' . $param_dimension
 							. '|' . $param_timezone
 							. '|' . $options['settings_timestamp'];
-						//$transient = get_transient ( $serial );
+						$transient = get_transient ( $serial );
 						//echo_v( 'serial: ' . $serial);
 						//echo_v( 'transient: ' . print_r($transient, true));
 						if (empty ( $transient )) {
@@ -478,8 +479,9 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							}
 						}
 					} catch ( exception $e ) {
-							echo 'error: ' . $e;
-							return;
+							echo 'Google AdSense Management API Error<br />';
+							echo_v($e);
+							//return;
 					}
 				} else {
 					echo 'no access token';
@@ -1272,14 +1274,15 @@ https://support.google.com/adsense/answer/1354736?hl=en
 
 // call session_start function
 function did2_ab_testing_init_session_start() {
-	session_start ();
+	
+	//session_start ();
 }
 
 // switch themes
 function did2_ab_testing_setup_theme() {
 	$options = get_option( 'did2_ab_testing_options' );
 	
-	if ( $_SESSION[ 'DID2_AB_TESTING_TIMESTAMP' ] != $options['settings_timestamp'] ) {
+	if ( !isset($_SESSION[ 'DID2_AB_TESTING_TIMESTAMP' ]) || $_SESSION[ 'DID2_AB_TESTING_TIMESTAMP' ] != $options['settings_timestamp'] ) {
 		// settings were changed
 		// reset data for old settings
 		$_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] = NULL;
@@ -1294,6 +1297,7 @@ function did2_ab_testing_setup_theme() {
 		// do not switch twice at one session.
 	}
 	
+	//$ts_mode = true;
 	$ts_mode = true;
 	$manual_mode = !$ts_mode;
 	
@@ -1321,7 +1325,7 @@ function did2_ab_testing_setup_theme() {
 							'useTimezoneReporting' => $param_timezone
 						);
 						
-						$serial = 'did2_ab_testingaa'
+						$serial = 'did2_ab_testingaaa'
 							. '|' . $from
 							. '|' . $to
 							. '|' . implode( '_', $param_metric)
@@ -1335,39 +1339,50 @@ function did2_ab_testing_setup_theme() {
 						//echo_v( 'serial: ' . $serial);
 						//echo_v( 'transient: ' . print_r($transient, true));
 						
-						if (empty ( $transient )) {
-							//echo_v( 'true<br />');
-							
-							require_once DID2AB_PATH . '/lib/google-adsense-dashboard-for-wp/function.php';
-							$auth = new AdSenseAuth();
-							$auth->authenticate ( 'default' );
-							$adSense = $auth->getAdSenseService();
-						
-							$data = $adSense->reports->generate ( $from, $to, $optParams );
-							set_transient ( $serial, $data, 31 * 60 );
+						if ( !empty ( $transient ) && $transient === 'error' ) {
+							//error_log('did2-ab-testing: error :' . $serial . ', ' . $transient);
+							$manual_mode = true;
 						} else {
-							//echo_v('cache: hit<br />');
-							$data = $transient;
+							// contruct data
+							if (empty ( $transient )) {
+								//error_log('did2-ab-testing: miss :' . $serial . ', ' . $transient);
+								//echo_v( 'true<br />');
+								
+								require_once DID2AB_PATH . '/lib/google-adsense-dashboard-for-wp/function.php';
+								$auth = new AdSenseAuth();
+								$auth->authenticate ( 'default' );
+								$adSense = $auth->getAdSenseService();
+							
+								$data = $adSense->reports->generate ( $from, $to, $optParams );
+								set_transient ( $serial, $data, 31 * 60 );
+							} else {
+								//error_log('did2-ab-testing: hit :' . $serial);// . ', ' . $transient['totals']);
+								//echo_v('cache: hit<br />');
+								$data = $transient;
+							}
+							
+							//echo_v(print_r($data, true));
+							//$adsense_result[$theme_dir_name] = array();
+							//echo '<b>' . $data['totals'][0] . '</b>';
+							//echo_v('aaab');
+							$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
+							//echo_v('aaaa');
+							//$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
+							$adsense_result[$theme_dir_name]['CLICKS'] = $data['totals'][1];
+							//$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
+							$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][2];
+							//$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
+							$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][3];
+							//$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
+							$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][4];
+							//$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
+							
+							//echo_v($theme_dir_name);
 						}
-						
-						//echo_v(print_r($data, true));
-						//$adsense_result[$theme_dir_name] = array();
-						//echo '<b>' . $data['totals'][0] . '</b>';
-						//echo_v('aaab');
-						$adsense_result[$theme_dir_name]['PV'] = $data['totals'][0];
-						//echo_v('aaaa');
-						//$adsense_result['MAX_PV'] = max( $adsense_result[$theme_dir_name]['PV'], $adsense_result['MAX_PV'] );
-						$adsense_result[$theme_dir_name]['CLICKS'] = $data['totals'][1];
-						//$adsense_result['MAX_CLICKS'] = max( $adsense_result[$theme_dir_name]['CLICKS'], $adsense_result['MAX_CLICKS'] );
-						$adsense_result[$theme_dir_name]['CPC'] = $data['totals'][2];
-						//$adsense_result['MAX_CPC'] = max( $adsense_result[$theme_dir_name]['CPC'], $adsense_result['MAX_CPC'] );
-						$adsense_result[$theme_dir_name]['RPM'] = $data['totals'][3];
-						//$adsense_result['MAX_RPM'] = max( $adsense_result[$theme_dir_name]['RPM'], $adsense_result['MAX_RPM'] );
-						$adsense_result[$theme_dir_name]['EARNINGS'] = $data['totals'][4];
-						//$adsense_result['MAX_EARNINGS'] = max( $adsense_result[$theme_dir_name]['EARNINGS'], $adsense_result['MAX_EARNINGS'] );
-						
-						//echo_v($theme_dir_name);
 					} catch ( exception $e ) {
+						error_log ( 'did2-ab-testing: api failure serial=' . $serial . ', e=' . $e->getMessage() );
+						
+						set_transient ( $serial, 'error', 30 * 60);
 						//echo_v('error: ' . $e);
 						$manual_mode = true;
 					}
@@ -1450,7 +1465,11 @@ function did2_ab_testing_setup_theme() {
 		}
 	}
 
-	$x_wp_template = $_SERVER[ 'HTTP_X_WP_TEMPLATE' ];
+	if ( isset( $_SERVER[ 'HTTP_X_WP_TEMPLATE' ] ) ) {
+		$x_wp_template = $_SERVER[ 'HTTP_X_WP_TEMPLATE' ];
+	} else {
+		$x_wp_template = "";
+	}
 	if($x_wp_template != "" && isset($themes[$x_wp_template])) {
 		$_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] = $themes[ $x_wp_template ][ 'Template' ];
 		$_SESSION[ 'DID2_AB_TESTING_STYLESHEET' ] = $themes[ $x_wp_template ][ 'Stylesheet' ];

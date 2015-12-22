@@ -425,7 +425,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 					);
 					
 					try {
-						$serial = 'did2_ab_testing'
+						$serial = 'did2_ab_testinga'
 							. '|' . $from
 							. '|' . $to
 							. '|' . implode( '_', $param_metric)
@@ -433,18 +433,20 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							. '|' . $param_dimension
 							. '|' . $param_timezone
 							. '|' . $options['settings_timestamp'];
-						$transient = get_transient ( $serial );
+						echo_v('md5( $serial ) : ' . md5( $serial ));
+						$transient = get_transient ( md5( $serial ) );
 						//echo_v( 'serial: ' . $serial);
-						//echo_v( 'transient: ' . print_r($transient, true));
+						echo_v( 'transient: ' . print_r($transient, true));
 						if (empty ( $transient )) {
-							echo_v('cache: miss');
+							echo_v('cache: miss, seria: ' . $serial . '<br />');
 							//echo '<!-- ';
 							//var_dump ($optParams);
 							//echo ' -->';
 						
 							$report = $adSense->reports->generate ( $from, $to, $optParams );
 							echo_v('<pre>' . print_r ( $report, true ) . '</pre>');
-							set_transient ( $serial, $data, 1 * 60 );
+							$result = set_transient ( md5( $serial ), $report, 1 * 60 );
+							echo_v('set_transient returns : ' . $result);
 						} else {
 							echo_v('cache: hit<br />');
 							$report = $transient;
@@ -518,7 +520,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							. '|' . implode( '_', $param_filter)
 							. '|' . $param_timezone
 							. '|' . $options['settings_timestamp'];
-						$transient = get_transient ( $serial );
+						$transient = get_transient( md5( $serial ) );
 						echo_v( 'serial: ' . $serial);
 						echo_v( 'transient: ' . print_r($transient, true));
 						if (empty ( $transient )) {
@@ -528,7 +530,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 							//echo ' -->';
 						
 							$data = $adSense->reports->generate ( $from, $to, $optParams );
-							set_transient ( $serial, $data, 1 * 60 );
+							set_transient ( md5( $serial ), $data, 1 * 60 );
 						} else {
 							echo_v('cache: hit<br />');
 							$data = $transient;
@@ -1335,7 +1337,7 @@ function did2_ab_testing_setup_theme() {
 						set_include_path ( DID2AB_PATH . '/lib/google-api-php-client/src/'. PATH_SEPARATOR . get_include_path () );
 						require_once 'Google/Client.php'; // require for AdSense.php
 						require_once 'Google/Service/AdSense.php'; // for deserialize transient object (class: Google_Service_AdSense_AdsenseReportsGenerateResponse)
-						$transient = get_transient ( $serial );
+						$transient = get_transient ( md5( $serial ) );
 						//echo_v( 'serial: ' . $serial);
 						//echo_v( 'transient: ' . print_r($transient, true));
 						
@@ -1354,7 +1356,7 @@ function did2_ab_testing_setup_theme() {
 								$adSense = $auth->getAdSenseService();
 							
 								$data = $adSense->reports->generate ( $from, $to, $optParams );
-								set_transient ( $serial, $data, 31 * 60 );
+								set_transient ( md5( $serial ), $data, 31 * 60 );
 							} else {
 								//error_log('did2-ab-testing: hit :' . $serial);// . ', ' . $transient['totals']);
 								//echo_v('cache: hit<br />');

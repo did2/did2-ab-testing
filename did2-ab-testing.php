@@ -806,7 +806,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 		<td class="switch_count">
 			<?php
 				$serial = 'did2_ab_testing_switch_counter_' . $theme_dir_name . '_' . $options['settings_timestamp'];
-				$count = get_transient( $serial );
+				$count = get_transient( md5( $serial ) );
 				if ( false === $count ) {
 					$count = 0;
 				}
@@ -1478,12 +1478,12 @@ function did2_ab_testing_setup_theme() {
 	}
 	
 	$serial = 'did2_ab_testing_switch_counter_' . $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] . '_' . $options['settings_timestamp'];
-	$count = get_transient( $serial );
+	$count = get_transient( md5( $serial ) );
 	if ( false === $count ) {
 		$count = 0;
 	}
 	$count++;
-	set_transient( $serial, $count, 12 * 60 * 60);
+	set_transient( md5( $serial ), $count, 12 * 60 * 60);
 	
 	return true;
 }

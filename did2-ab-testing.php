@@ -582,7 +582,7 @@ if ( isset ( $_GET ['save_access_token'] ) && ! isset( $_GET['settings-updated']
 			$pv = $adsense_result[$theme_dir_name]['PV'];
 			$cpc = $adsense_result[$theme_dir_name]['CPC'];
 			
-			if( $options[ $theme_dir_name ] > 0 && $clicks > 0 && $pv > 0) {
+			if( $options[ $theme_dir_name ] > 0 && $clicks > 0 && ($pv-$clicks+1) > 0) {
 				$beta[ $theme_dir_name ] = new RBetaQ($clicks+1, $pv-$clicks+1);
 				$reward[ $theme_dir_name ] = $cpc;
 			}
@@ -1484,6 +1484,9 @@ function did2_ab_testing_setup_theme() {
 	}
 	$count++;
 	set_transient( md5( $serial ), $count, 12 * 60 * 60);
+	
+	header( 'X-D2AB-Template: ' . $_SESSION[ 'DID2_AB_TESTING_TEMPLATE' ] );
+	header( 'X-D2AB-SettingsTs: ' . $options['settings_timestamp'] );
 	
 	return true;
 }
